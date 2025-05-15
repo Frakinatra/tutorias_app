@@ -1,0 +1,111 @@
+CREATE DATABASE IF NOT EXISTS tutorias_db;
+USE tutorias_db;
+
+-- Tabla de usuarios (para login)
+CREATE TABLE usuarios (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    id_relacion INT COMMENT 'ID en la tabla correspondiente (estudiantes o tutores)'
+);
+
+-- Tabla de áreas de conocimiento
+CREATE TABLE areas_conocimiento (
+    id_area INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_area VARCHAR(100) NOT NULL
+);
+
+-- Tabla de estudiantes
+CREATE TABLE estudiantes (
+    id_estudiante INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    correo VARCHAR(100) NOT NULL UNIQUE,
+    carrera VARCHAR(100),
+    semestre INT
+);
+
+-- Tabla de tutores
+CREATE TABLE tutores (
+    id_tutor INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    correo VARCHAR(100) NOT NULL UNIQUE,
+    especialidad VARCHAR(100)
+);
+
+-- Tabla de asignación de áreas a tutores
+CREATE TABLE tutores_areas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_tutor INT,
+    id_area INT,
+    FOREIGN KEY (id_tutor) REFERENCES tutores(id_tutor),
+    FOREIGN KEY (id_area) REFERENCES areas_conocimiento(id_area),
+    UNIQUE KEY (id_tutor, id_area)
+);
+
+-- Tabla de solicitudes
+CREATE TABLE solicitudes (
+    id_solicitud INT AUTO_INCREMENT PRIMARY KEY,
+    id_estudiante INT,
+    id_area INT,
+    fecha DATETIME,
+    estado VARCHAR(50) DEFAULT 'Pendiente',
+    FOREIGN KEY (id_estudiante) REFERENCES estudiantes(id_estudiante),
+    FOREIGN KEY (id_area) REFERENCES areas_conocimiento(id_area)
+);
+
+-- Tabla de sesiones
+CREATE TABLE sesiones (
+    id_sesion INT AUTO_INCREMENT PRIMARY KEY,
+    id_solicitud INT,
+    id_estudiante INT,
+    id_tutor INT,
+    id_area INT,
+    fecha_hora DATETIME,
+    detalles TEXT,
+    estado VARCHAR(50),
+    FOREIGN KEY (id_estudiante) REFERENCES estudiantes(id_estudiante),
+    FOREIGN KEY (id_tutor) REFERENCES tutores(id_tutor),
+    FOREIGN KEY (id_area) REFERENCES areas_conocimiento(id_area),
+    FOREIGN KEY (id_solicitud) REFERENCES solicitudes(id_solicitud)
+);
+
+-- Insertar datos iniciales
+-- Admin
+INSERT INTO usuarios (username, password, id_relacion) VALUES 
+('admin@admin.edu', 'admin123', NULL);
+
+-- Áreas de conocimiento
+INSERT INTO areas_conocimiento (nombre_area) VALUES 
+('Matemáticas'),
+('Física'),
+('Programación'),
+('Inglés'),
+('Historia');
+
+-- Estudiantes
+INSERT INTO estudiantes (nombre, correo, carrera, semestre) VALUES 
+('Juan Pérez', 'juan.perez@alumno.edu', 'Ingeniería', 3),
+('María Gómez', 'maria.gomez@alumno.edu', 'Medicina', 2),
+('Carlos Ruiz', 'carlos.ruiz@alumno.edu', 'Derecho', 4);
+
+-- Tutores
+INSERT INTO tutores (nombre, correo, especialidad) VALUES 
+('Profesor López', 'profesor.lopez@tutor.edu', 'Matemáticas Avanzadas'),
+('Profesora Martínez', 'profesora.martinez@tutor.edu', 'Física Cuántica'),
+('Ingeniero Díaz', 'ingeniero.diaz@tutor.edu', 'Programación Python');
+
+-- Usuarios para estudiantes y tutores
+INSERT INTO usuarios (username, password, id_relacion) VALUES 
+('juan.perez@alumno.edu', 'alumno123', 1),
+('maria.gomez@alumno.edu', 'alumno123', 2),
+('carlos.ruiz@alumno.edu', 'alumno123', 3),
+('profesor.lopez@tutor.edu', 'tutor123', 1),
+('profesora.martinez@tutor.edu', 'tutor123', 2),
+('ingeniero.diaz@tutor.edu', 'tutor123', 3);
+
+-- Asignar áreas a tutores
+INSERT INTO tutores_areas (id_tutor, id_area) VALUES 
+(1, 1), -- López enseña Matemáticas
+(2, 2), -- Martínez enseña Física
+(3, 3), -- Díaz enseña Programación
+(1, 3); -- López también enseña Programación
