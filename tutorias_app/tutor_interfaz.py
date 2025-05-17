@@ -1,60 +1,84 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox
 from conexion import conectar
-from datetime import datetime
 
 class InterfazTutor:
     def __init__(self, root, id_tutor):
         self.root = root
         self.id_tutor = id_tutor
         self.root.title(f"📚 Tutor - Gestión de Solicitudes (ID: {id_tutor})")
-        self.root.geometry("700x500")
+        self.root.geometry("1000x600")
         self.root.configure(bg="#f0f0f0")
 
-        self.id_tutor = 1  # Aquí pondrías el ID del tutor logueado
+        # ===== Frame superior para búsqueda =====
+        frame_busqueda = tk.Frame(root, bg="#ffffff", bd=2, relief="groove")
+        frame_busqueda.pack(padx=10, pady=10, fill="x")
 
-        self.centrar_ventana(700, 500)
+        tk.Label(frame_busqueda, text="Área de Conocimiento:", bg="#ffffff", font=("Arial", 11)).pack(side="left", padx=5, pady=10)
 
-        tk.Label(root, text="Solicitudes Pendientes", bg="#f0f0f0", font=("Arial", 14, "bold")).pack(pady=10)
+        self.area_var = tk.StringVar()
+        self.combo_areas = ttk.Combobox(frame_busqueda, textvariable=self.area_var, state="readonly", width=30)
+        self.combo_areas.pack(side="left", padx=5)
 
-        columns = ("ID Solicitud", "Estudiante", "Área", "Fecha", "Estado")
-        self.tree = ttk.Treeview(root, columns=columns, show="headings")
-        for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, anchor="center")
+        tk.Label(frame_busqueda, text="Estado:", bg="#ffffff", font=("Arial", 11)).pack(side="left", padx=5, pady=10)
 
-        scrollbar = ttk.Scrollbar(root, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscroll=scrollbar.set)
-        self.tree.pack(side="left", fill="both", expand=True, padx=10)
-        scrollbar.pack(side="right", fill="y")
+        self.estado_var = tk.StringVar()
+        self.combo_estados = ttk.Combobox(frame_busqueda, textvariable=self.estado_var, state="readonly", width=20)
+        self.combo_estados["values"] = ["Pendiente", "Aceptada", "Rechazada"]
+        self.combo_estados.pack(side="left", padx=5)
 
-        frame_botones = tk.Frame(root, bg="#f0f0f0")
-        frame_botones.pack(pady=10)
+        tk.Button(frame_busqueda, text="🔄 Cargar Áreas", command=self.cargar_areas, bg="#4caf50", fg="white").pack(side="left", padx=5)
+        tk.Button(frame_busqueda, text="🔍 Filtrar", command=self.filtrar_solicitudes, bg="#2196f3", fg="white").pack(side="left", padx=5)
+        tk.Button(frame_busqueda, text="🧹 Limpiar Filtros", command=self.limpiar_filtros, bg="#9e9e9e", fg="white").pack(side="left", padx=5)
 
-        tk.Button(frame_botones, text="✅ Aceptar Solicitud", bg="#4caf50", fg="white", command=self.aceptar_solicitud).pack(padx=5, pady=5)
-        tk.Button(frame_botones, text="❌ Rechazar Solicitud", bg="#f44336", fg="white", command=self.rechazar_solicitud).pack(padx=5, pady=5)
-        tk.Button(frame_botones, text="📝 Completar Sesión", bg="#ff9800", fg="white", command=self.completar_sesion).pack(padx=5, pady=5)
+        # ===== Treeview para mostrar solicitudes =====
+        self.tree = ttk.Treeview(root, columns=("ID", "Estudiante", "Área", "Fecha", "Estado"), show="headings")
+        self.tree.heading("ID", text="ID")
+        self.tree.heading("Estudiante", text="Estudiante")
+        self.tree.heading("Área", text="Área de Conocimiento")
+        self.tree.heading("Fecha", text="Fecha")
+        self.tree.heading("Estado", text="Estado")
 
+        self.tree.pack(padx=10, pady=10, fill="both", expand=True)
+
+        # ===== Botones para aceptar/rechazar =====
+        btn_frame = tk.Frame(root, bg="#f0f0f0")
+        btn_frame.pack(pady=10)
+
+        tk.Button(btn_frame, text="Aceptar Solicitud", command=self.aceptar_solicitud, bg="#4caf50", fg="white").pack(side="left", padx=10)
+        tk.Button(btn_frame, text="Rechazar Solicitud", command=self.rechazar_solicitud, bg="#f44336", fg="white").pack(side="left", padx=10)
+        tk.Button(btn_frame, text="Marcar como Completada", command=self.completar_solicitud, bg="#ff9800", fg="white").pack(side="left", padx=10)
+
+        # ===== Cargar datos iniciales =====
+        self.cargar_areas()
         self.cargar_solicitudes()
 
-    def centrar_ventana(self, ancho, alto):
-        pantalla_ancho = self.root.winfo_screenwidth()
-        pantalla_alto = self.root.winfo_screenheight()
-        x = (pantalla_ancho // 2) - (ancho // 2)
-        y = (pantalla_alto // 2) - (alto // 2)
-        self.root.geometry(f"{ancho}x{alto}+{x}+{y}")
+    def cargar_areas(self):
+        conexion = conectar()
+        cursor = conexion.cursor()
+        query = """
+            SELECT DISTINCT a.nombre_area
+            FROM areas_conocimiento a
+            JOIN tutores_areas ta ON a.id_area = ta.id_area
+            WHERE ta.id_tutor = %s
+        """
+        cursor.execute(query, (self.id_tutor,))
+        areas = [fila[0] for fila in cursor.fetchall()]
+        conexion.close()
+        self.combo_areas["values"] = areas
 
     def cargar_solicitudes(self):
         conexion = conectar()
         cursor = conexion.cursor()
         query = """
-        SELECT s.id_solicitud, e.nombre, a.nombre_area, s.fecha, s.estado
-        FROM solicitudes s
-        JOIN estudiantes e ON s.id_estudiante = e.id_estudiante
-        JOIN areas_conocimiento a ON s.id_area = a.id_area
-        WHERE s.estado = 'Pendiente'
+            SELECT s.id_solicitud, e.nombre, a.nombre_area, s.fecha, s.estado
+            FROM solicitudes s
+            JOIN estudiantes e ON s.id_estudiante = e.id_estudiante
+            JOIN areas_conocimiento a ON s.id_area = a.id_area
+            JOIN tutores_areas ta ON s.id_area = ta.id_area
+            WHERE ta.id_tutor = %s
         """
-        cursor.execute(query)
+        cursor.execute(query, (self.id_tutor,))
         resultados = cursor.fetchall()
         conexion.close()
 
@@ -64,65 +88,101 @@ class InterfazTutor:
         for fila in resultados:
             self.tree.insert("", "end", values=fila)
 
+
+
+    def filtrar_solicitudes(self):
+        area = self.area_var.get()
+        estado = self.estado_var.get()
+
+        conexion = conectar()
+        cursor = conexion.cursor()
+        query = """
+            SELECT s.id_solicitud, e.nombre, a.nombre_area, s.fecha, s.estado
+            FROM solicitudes s
+            JOIN estudiantes e ON s.id_estudiante = e.id_estudiante
+            JOIN areas_conocimiento a ON s.id_area = a.id_area
+            JOIN tutores_areas ta ON s.id_area = ta.id_area
+            WHERE ta.id_tutor = %s
+        """
+        params = [self.id_tutor]
+
+        if area:
+            query += " AND a.nombre_area = %s"
+            params.append(area)
+
+        if estado:
+            query += " AND s.estado = %s"
+            params.append(estado)
+
+        cursor.execute(query, params)
+        resultados = cursor.fetchall()
+        conexion.close()
+
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for fila in resultados:
+            self.tree.insert("", "end", values=fila)
+
+
+    def limpiar_filtros(self):
+        self.area_var.set("")  # Limpiar selección del combo
+        self.estado_var.set("")  # Si tienes estado también
+        self.cargar_solicitudes()  # Recargar todo sin filtros
+
+
     def aceptar_solicitud(self):
         seleccionado = self.tree.selection()
         if not seleccionado:
-            messagebox.showwarning("Atención", "Selecciona una solicitud.")
+            messagebox.showwarning("Advertencia", "Seleccione una solicitud.")
             return
-        id_solicitud = self.tree.item(seleccionado[0])['values'][0]
+
+        item = self.tree.item(seleccionado)
+        id_solicitud = item["values"][0]
+
         conexion = conectar()
         cursor = conexion.cursor()
-
-        # Cambiar estado
         cursor.execute("UPDATE solicitudes SET estado = 'Aceptada' WHERE id_solicitud = %s", (id_solicitud,))
-
-        # Crear sesión
-        cursor.execute("""
-        INSERT INTO sesiones (id_solicitud, id_tutor, fecha, estado)
-        VALUES (%s, %s, %s, 'Programada')
-        """, (id_solicitud, self.id_tutor, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-
         conexion.commit()
         conexion.close()
-        messagebox.showinfo("Éxito", "Solicitud aceptada y sesión programada.")
-        self.cargar_solicitudes()
+        self.filtrar_solicitudes()
+        messagebox.showinfo("Éxito", "Solicitud aceptada.")
 
     def rechazar_solicitud(self):
         seleccionado = self.tree.selection()
         if not seleccionado:
-            messagebox.showwarning("Atención", "Selecciona una solicitud.")
+            messagebox.showwarning("Advertencia", "Seleccione una solicitud.")
             return
-        id_solicitud = self.tree.item(seleccionado[0])['values'][0]
+
+        item = self.tree.item(seleccionado)
+        id_solicitud = item["values"][0]
+
         conexion = conectar()
         cursor = conexion.cursor()
         cursor.execute("UPDATE solicitudes SET estado = 'Rechazada' WHERE id_solicitud = %s", (id_solicitud,))
         conexion.commit()
         conexion.close()
-        messagebox.showinfo("Listo", "Solicitud rechazada.")
-        self.cargar_solicitudes()
+        self.filtrar_solicitudes()
+        messagebox.showinfo("Éxito", "Solicitud rechazada.")
 
-    def completar_sesion(self):
+    def completar_solicitud(self):
         seleccionado = self.tree.selection()
         if not seleccionado:
-            messagebox.showwarning("Atención", "Selecciona una solicitud aceptada.")
+            messagebox.showwarning("Advertencia", "Seleccione una solicitud.")
             return
-        id_solicitud = self.tree.item(seleccionado[0])['values'][0]
 
-        detalle = simpledialog.askstring("Detalle de Sesión", "Escribe los detalles de la sesión:")
-        if not detalle:
+        item = self.tree.item(seleccionado)
+        id_solicitud = item["values"][0]
+        estado_actual = item["values"][4]
+
+        if estado_actual != "Aceptada":
+            messagebox.showwarning("Advertencia", "Solo puede completar solicitudes que ya fueron aceptadas.")
             return
 
         conexion = conectar()
         cursor = conexion.cursor()
-
-        # Actualizar sesión
-        cursor.execute("""
-        UPDATE sesiones
-        SET detalles = %s, estado = 'Completada'
-        WHERE id_solicitud = %s AND id_tutor = %s
-        """, (detalle, id_solicitud, self.id_tutor))
-
+        cursor.execute("UPDATE solicitudes SET estado = 'Completada' WHERE id_solicitud = %s", (id_solicitud,))
         conexion.commit()
         conexion.close()
-        messagebox.showinfo("Listo", "Sesión completada.")
-        self.cargar_solicitudes()
+        self.filtrar_solicitudes()
+        messagebox.showinfo("Éxito", "Solicitud marcada como completada.")

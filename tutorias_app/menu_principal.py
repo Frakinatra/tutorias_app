@@ -15,7 +15,7 @@ class MenuPrincipal:
 
         # Título
         titulo = tk.Label(self.root, text="📚 Tutorías Académicas", font=("Helvetica", 22, "bold"),
-                          bg="#e3f2fd", fg="#0d47a1")
+                        bg="#e3f2fd", fg="#0d47a1")
         titulo.pack(pady=30)
 
         # Botones del menú
@@ -31,7 +31,7 @@ class MenuPrincipal:
 
         for texto, comando, color in botones:
             boton = tk.Button(self.root, text=texto, command=comando, width=30, height=2,
-                              bg=color, fg="white", font=("Helvetica", 12))
+                            bg=color, fg="white", font=("Helvetica", 12))
             boton.pack(pady=8)
 
     def abrir_alta_usuario(self):
@@ -40,7 +40,7 @@ class MenuPrincipal:
 
     def abrir_estudiante_interfaz(self):
         ventana = tk.Toplevel(self.root)
-        InterfazEstudiante(ventana)
+        InterfazEstudiante(ventana, id_estudiante=1)  # ID de prueba para tests desde administrador
 
     def abrir_tutor_interfaz(self):
         ventana = tk.Toplevel(self.root)
@@ -65,7 +65,6 @@ class MenuPrincipal:
         x = (pantalla_ancho // 2) - (ancho // 2)
         y = (pantalla_alto // 2) - (alto // 2)
         self.root.geometry(f"{ancho}x{alto}+{x}+{y}")
-
 
 # Ejemplo de uso
 if __name__ == '__main__':
