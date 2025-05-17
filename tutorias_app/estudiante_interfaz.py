@@ -4,10 +4,10 @@ from conexion import conectar
 from datetime import datetime
 
 class InterfazEstudiante:
-    def __init__(self, root, id_estudiante):
+    def __init__(self, root, id_estudiante=None):
         self.root = root
-        self.id_estudiante = id_estudiante
-        self.root.title(f"📚 Gestión de Tutorías - Estudiante (ID: {id_estudiante})")
+        self.id_estudiante = id_estudiante if id_estudiante is not None else 1  # valor por defecto para pruebas
+        self.root.title(f"📚 Gestión de Tutorías - Estudiante (ID: {self.id_estudiante})")
         self.root.geometry("600x500")
         self.root.configure(bg="#f0f0f0")
 
@@ -95,8 +95,6 @@ class InterfazEstudiante:
             messagebox.showwarning("⚠️ Atención", "Selecciona un área de conocimiento.")
             return
 
-        id_estudiante = 1  # 🔥 Cambiar por variable real cuando tengas login
-
         fecha_actual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         conexion = conectar()
@@ -115,7 +113,7 @@ class InterfazEstudiante:
         INSERT INTO solicitudes (id_estudiante, id_area, fecha, estado)
         VALUES (%s, %s, %s, 'Pendiente')
         """
-        cursor.execute(insert_query, (id_estudiante, id_area, fecha_actual))
+        cursor.execute(insert_query, (self.id_estudiante, id_area, fecha_actual))
         conexion.commit()
         conexion.close()
 
