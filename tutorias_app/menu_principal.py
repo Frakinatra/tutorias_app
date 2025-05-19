@@ -35,7 +35,7 @@ class MenuPrincipal:
             boton.pack(pady=8)
 
     def abrir_alta_usuario(self):
-        ventana = tk.Toplevel(self.root)
+        ventana = tk.Toplevel(self.root, id_tutor=1)  # ID de prueba para tests desde administrador
         AltaUsuario(ventana)
 
     def abrir_estudiante_interfaz(self):
