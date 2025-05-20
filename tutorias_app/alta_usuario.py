@@ -4,7 +4,7 @@ import mysql.connector
 import re
 from conexion import conectar
 
-class AltaUsuario:
+class AltaUsuario: #prueba
     def __init__(self, root):
         self.root = root
         self.root.title("📝 Alta de Usuario")
