@@ -7,10 +7,10 @@ class GestionUsuarios:
     def __init__(self, root):
         self.root = root
         self.root.title("👥 Gestión de Usuarios")
-        self.root.geometry("750x500")
+        self.root.geometry("1000x600")
         self.root.configure(bg="#f0f0f0")
 
-        self.centrar_ventana(750, 500)
+        self.centrar_ventana(1000, 600)
 
         notebook = ttk.Notebook(root)
         notebook.pack(padx=10, pady=10, fill="both", expand=True)
@@ -33,20 +33,31 @@ class GestionUsuarios:
 
     # CRUD Estudiantes
     def estudiantes_ui(self):
-        columns = ("ID", "Nombre", "Correo", "Carrera", "Semestre", "Contraseña")
+        columns = ("ID", "Nombres", "Apellido Paterno", "Apellido Materno", "Correo", "Carrera", "Semestre", "Contraseña")
         self.tree_estudiantes = ttk.Treeview(self.frame_estudiantes, columns=columns, show="headings")
+        
         anchos = {
             "ID": 50,
-            "Nombre": 130,
-            "Correo": 200,
-            "Carrera": 115,
+            "Nombres": 100,
+            "Apellido Paterno": 100,
+            "Apellido Materno": 100,
+            "Correo": 150,
+            "Carrera": 100,
             "Semestre": 70,
-            "Contraseña": 110   
+            "Contraseña": 100   
         }
+        
         for col in columns:
-
             self.tree_estudiantes.heading(col, text=col)
             self.tree_estudiantes.column(col, anchor="center", width=anchos.get(col, 100))
+        
+        scroll_y = ttk.Scrollbar(self.frame_estudiantes, orient="vertical", command=self.tree_estudiantes.yview)
+        scroll_y.pack(side="right", fill="y")
+        
+        scroll_x = ttk.Scrollbar(self.frame_estudiantes, orient="horizontal", command=self.tree_estudiantes.xview)
+        scroll_x.pack(side="bottom", fill="x")
+        
+        self.tree_estudiantes.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         self.tree_estudiantes.pack(fill="both", expand=True, padx=10, pady=5)
 
         frame_botones = tk.Frame(self.frame_estudiantes, bg="#f0f0f0")
@@ -59,71 +70,118 @@ class GestionUsuarios:
         self.cargar_estudiantes()
 
     def cargar_estudiantes(self):
-        conexion = conectar()
-        cursor = conexion.cursor()
+        try:
+            conexion = conectar()
+            cursor = conexion.cursor(dictionary=True)
 
-        cursor.execute("""
-            SELECT e.id_estudiante, e.nombre, e.correo, e.carrera, e.semestre, u.password
-            FROM estudiantes e
-            JOIN usuarios u ON e.correo = u.username
-        """)
+            cursor.execute("""
+                SELECT e.id_estudiante, e.nombres, e.apellido_paterno, e.apellido_materno, 
+                       e.correo, e.carrera, e.semestre, u.password
+                FROM estudiantes e
+                JOIN usuarios u ON e.correo = u.username
+            """)
 
-        resultados = cursor.fetchall()
-        conexion.close()
+            # Limpia la tabla actual
+            for item in self.tree_estudiantes.get_children():
+                self.tree_estudiantes.delete(item)
 
-        # Limpia la tabla actual
-        for item in self.tree_estudiantes.get_children():
-            self.tree_estudiantes.delete(item)
-
-        # Inserta los nuevos datos
-        for fila in resultados:
-            self.tree_estudiantes.insert("", "end", values=fila)
-
+            # Inserta los nuevos datos
+            for estudiante in cursor.fetchall():
+                self.tree_estudiantes.insert("", "end", values=(
+                    estudiante['id_estudiante'],
+                    estudiante['nombres'],
+                    estudiante['apellido_paterno'],
+                    estudiante['apellido_materno'],
+                    estudiante['correo'],
+                    estudiante['carrera'],
+                    estudiante['semestre'],
+                    estudiante['password']
+                ))
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar los estudiantes: {str(e)}")
+        finally:
+            if 'conexion' in locals() and conexion.is_connected():
+                conexion.close()
 
     def agregar_estudiante(self):
-        nombre = simpledialog.askstring("Nuevo Estudiante", "Nombre completo:")
-        if not nombre:
-            return
+        ventana = tk.Toplevel()
+        ventana.title("Nuevo Estudiante")
+        ventana.geometry("400x400")
+        ventana.configure(bg="#f0f0f0")
 
-        carrera = simpledialog.askstring("Nuevo Estudiante", "Carrera:")
-        if not carrera:
-            return
+        tk.Label(ventana, text="Nombres:", bg="#f0f0f0").pack(pady=5)
+        entry_nombres = tk.Entry(ventana)
+        entry_nombres.pack()
 
-        try:
-            semestre = simpledialog.askinteger("Nuevo Estudiante", "Semestre:")
-            if semestre is None or semestre <= 0:
-                messagebox.showwarning("Datos inválidos", "El semestre debe ser un número positivo.")
+        tk.Label(ventana, text="Apellido Paterno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_p = tk.Entry(ventana)
+        entry_apellido_p.pack()
+
+        tk.Label(ventana, text="Apellido Materno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_m = tk.Entry(ventana)
+        entry_apellido_m.pack()
+
+        tk.Label(ventana, text="Carrera:", bg="#f0f0f0").pack(pady=5)
+        entry_carrera = tk.Entry(ventana)
+        entry_carrera.pack()
+
+        tk.Label(ventana, text="Semestre:", bg="#f0f0f0").pack(pady=5)
+        entry_semestre = tk.Entry(ventana)
+        entry_semestre.pack()
+
+        tk.Label(ventana, text="Contraseña:", bg="#f0f0f0").pack(pady=5)
+        entry_password = tk.Entry(ventana, show="*")
+        entry_password.pack()
+
+        def guardar():
+            nombres = entry_nombres.get().strip()
+            apellido_p = entry_apellido_p.get().strip()
+            apellido_m = entry_apellido_m.get().strip()
+            carrera = entry_carrera.get().strip()
+            semestre = entry_semestre.get().strip()
+            password = entry_password.get().strip()
+
+            if not nombres or not apellido_p or not carrera or not semestre or not password:
+                messagebox.showwarning("Error", "Todos los campos son obligatorios (excepto apellido materno)")
                 return
-        except ValueError:
-            messagebox.showwarning("Datos inválidos", "El semestre debe ser un número.")
-            return
 
-        # Generar correo automático
-        correo = f"{nombre.lower().replace(' ', '.')}@alumno.edu"
+            try:
+                semestre = int(semestre)
+                if semestre <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showwarning("Error", "El semestre debe ser un número positivo")
+                return
 
-        conexion = conectar()
-        cursor = conexion.cursor()
-        try:
-            cursor.execute(
-                "INSERT INTO estudiantes (nombre, correo, carrera, semestre) VALUES (%s, %s, %s, %s)",
-                (nombre, correo, carrera, semestre)
-            )
-            id_estudiante = cursor.lastrowid
+            correo = f"{nombres.lower().split()[0]}.{apellido_p.lower()}@alumno.edu"
 
-            # Insertar también en la tabla usuarios
-            cursor.execute(
-                "INSERT INTO usuarios (username, password, id_relacion) VALUES (%s, %s, %s)",
-                (correo, "alumno123", id_estudiante)
-            )
+            conexion = conectar()
+            cursor = conexion.cursor()
+            try:
+                cursor.execute(
+                    "INSERT INTO estudiantes (nombres, apellido_paterno, apellido_materno, correo, carrera, semestre) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    (nombres, apellido_p, apellido_m, correo, carrera, semestre)
+                )
+                id_estudiante = cursor.lastrowid
 
-            conexion.commit()
-            messagebox.showinfo("Éxito", f"Estudiante agregado.\nCorreo: {correo}\nContraseña temporal: alumno123")
-            self.cargar_estudiantes()
-        except mysql.connector.Error as err:
-            messagebox.showerror("Error", f"No se pudo agregar: {err}")
-        finally:
-            conexion.close()
+                cursor.execute(
+                    "INSERT INTO usuarios (username, password, tipo, id_relacion) "
+                    "VALUES (%s, %s, 'estudiante', %s)",
+                    (correo, password, id_estudiante)
+                )
 
+                conexion.commit()
+                messagebox.showinfo("Éxito", f"Estudiante agregado.\nCorreo: {correo}")
+                self.cargar_estudiantes()
+                ventana.destroy()
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error", f"No se pudo agregar: {err}")
+            finally:
+                conexion.close()
+
+        tk.Button(ventana, text="Guardar", command=guardar, bg="#4caf50", fg="white").pack(pady=10)
 
     def modificar_estudiante(self):
         seleccionado = self.tree_estudiantes.selection()
@@ -134,60 +192,97 @@ class GestionUsuarios:
         item = self.tree_estudiantes.item(seleccionado)
         datos = item["values"]
         id_estudiante = datos[0]
-        nombre_actual = datos[1]
-        correo = datos[2]
+        correo_actual = datos[4]
 
         ventana = tk.Toplevel()
         ventana.title("Modificar Estudiante")
-        ventana.geometry("350x250")
+        ventana.geometry("400x450")
+        ventana.configure(bg="#f0f0f0")
 
-        tk.Label(ventana, text="Nuevo nombre:").pack(pady=5)
-        entry_nombre = tk.Entry(ventana)
-        entry_nombre.insert(0, nombre_actual)
-        entry_nombre.pack()
+        tk.Label(ventana, text="Nombres:", bg="#f0f0f0").pack(pady=5)
+        entry_nombres = tk.Entry(ventana)
+        entry_nombres.insert(0, datos[1])
+        entry_nombres.pack()
 
-        tk.Label(ventana, text="Nueva contraseña:").pack(pady=5)
-        entry_contrasena = tk.Entry(ventana, show="*")
-        entry_contrasena.pack()
+        tk.Label(ventana, text="Apellido Paterno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_p = tk.Entry(ventana)
+        entry_apellido_p.insert(0, datos[2])
+        entry_apellido_p.pack()
 
-        tk.Label(ventana, text="Repetir contraseña:").pack(pady=5)
-        entry_repetir = tk.Entry(ventana, show="*")
-        entry_repetir.pack()
+        tk.Label(ventana, text="Apellido Materno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_m = tk.Entry(ventana)
+        entry_apellido_m.insert(0, datos[3])
+        entry_apellido_m.pack()
+
+        tk.Label(ventana, text="Carrera:", bg="#f0f0f0").pack(pady=5)
+        entry_carrera = tk.Entry(ventana)
+        entry_carrera.insert(0, datos[5])
+        entry_carrera.pack()
+
+        tk.Label(ventana, text="Semestre:", bg="#f0f0f0").pack(pady=5)
+        entry_semestre = tk.Entry(ventana)
+        entry_semestre.insert(0, datos[6])
+        entry_semestre.pack()
+
+        tk.Label(ventana, text="Nueva contraseña (dejar vacío para no cambiar):", bg="#f0f0f0").pack(pady=5)
+        entry_password = tk.Entry(ventana, show="*")
+        entry_password.pack()
 
         def guardar_cambios():
-            nuevo_nombre = entry_nombre.get().strip()
-            nueva_contrasena = entry_contrasena.get().strip()
-            repetir_contrasena = entry_repetir.get().strip()
-            
+            nombres = entry_nombres.get().strip()
+            apellido_p = entry_apellido_p.get().strip()
+            apellido_m = entry_apellido_m.get().strip()
+            carrera = entry_carrera.get().strip()
+            semestre = entry_semestre.get().strip()
+            password = entry_password.get().strip()
 
-            if not nuevo_nombre:
-                messagebox.showerror("Error", "El nombre no puede estar vacío.")
+            if not nombres or not apellido_p or not carrera or not semestre:
+                messagebox.showwarning("Error", "Los campos obligatorios no pueden estar vacíos")
                 return
+
+            try:
+                semestre = int(semestre)
+                if semestre <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showwarning("Error", "El semestre debe ser un número positivo")
+                return
+
+            nuevo_correo = f"{nombres.lower().split()[0]}.{apellido_p.lower()}@alumno.edu"
 
             conexion = conectar()
             cursor = conexion.cursor()
+            try:
+                # Actualizar estudiante
+                cursor.execute(
+                    "UPDATE estudiantes SET nombres=%s, apellido_paterno=%s, apellido_materno=%s, "
+                    "carrera=%s, semestre=%s, correo=%s WHERE id_estudiante=%s",
+                    (nombres, apellido_p, apellido_m, carrera, semestre, nuevo_correo, id_estudiante)
+                )
 
-            nvo_correo = f"{nuevo_nombre.lower().replace(' ', '.')}@alumno.edu"
-            # Actualiza el nombre
-            cursor.execute("UPDATE estudiantes SET nombre = %s, correo = %s WHERE id_estudiante = %s", (nuevo_nombre, nvo_correo, id_estudiante))
+                # Actualizar usuario
+                if password:
+                    cursor.execute(
+                        "UPDATE usuarios SET username=%s, password=%s WHERE username=%s",
+                        (nuevo_correo, password, correo_actual)
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE usuarios SET username=%s WHERE username=%s",
+                        (nuevo_correo, correo_actual)
+                    )
 
-            # Si se ingresó nueva contraseña
-            if nueva_contrasena or repetir_contrasena:
-                if nueva_contrasena != repetir_contrasena:
-                    messagebox.showerror("Error", "Las contraseñas no coinciden.")
-                    conexion.close()
-                    return
-                
-                cursor.execute("UPDATE usuarios SET password = %s, username = %s WHERE username = %s", (nueva_contrasena, nvo_correo, correo))
-
-            conexion.commit()
-            conexion.close()
-            self.cargar_estudiantes()
-            ventana.destroy()
-            messagebox.showinfo("Éxito", "Estudiante actualizado correctamente.")
+                conexion.commit()
+                messagebox.showinfo("Éxito", "Estudiante actualizado correctamente")
+                ventana.destroy()
+                self.cargar_estudiantes()
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error", f"No se pudo actualizar: {err}")
+                conexion.rollback()
+            finally:
+                conexion.close()
 
         tk.Button(ventana, text="Guardar cambios", command=guardar_cambios, bg="#2196f3", fg="white").pack(pady=10)
-
 
     def eliminar_estudiante(self):
         seleccionado = self.tree_estudiantes.selection()
@@ -206,7 +301,13 @@ class GestionUsuarios:
         try:
             # Obtener correo para eliminar usuario
             cursor.execute("SELECT correo FROM estudiantes WHERE id_estudiante = %s", (id_estudiante,))
-            correo = cursor.fetchone()[0]
+            resultado = cursor.fetchone()
+            
+            if not resultado:
+                messagebox.showerror("Error", "No se encontró el estudiante")
+                return
+                
+            correo = resultado[0]
             
             # Eliminar usuario primero
             cursor.execute("DELETE FROM usuarios WHERE username = %s", (correo,))
@@ -219,26 +320,37 @@ class GestionUsuarios:
             self.cargar_estudiantes()
         except mysql.connector.Error as err:
             messagebox.showerror("Error", f"No se pudo eliminar: {err}")
+            conexion.rollback()
         finally:
             conexion.close()
 
-        
-
-    # CRUD Tutores (similar a estudiantes)
+    # CRUD Tutores
     def tutores_ui(self):
-        columns = ("ID", "Nombre", "Correo", "Contraseña", "Especialidad", "Área")
+        columns = ("ID", "Nombres", "Apellido Paterno", "Apellido Materno", "Correo", "Especialidad", "Área", "Contraseña")
         self.tree_tutores = ttk.Treeview(self.frame_tutores, columns=columns, show="headings")
+        
         anchos = {
-            "ID": 20,
-            "Nombre": 115,
-            "Correo": 170,
-            "Contraseña": 80,
-            "Especialidad": 125,
-            "Área": 100   
+            "ID": 50,
+            "Nombres": 100,
+            "Apellido Paterno": 100,
+            "Apellido Materno": 100,
+            "Correo": 150,
+            "Especialidad": 120,
+            "Área": 100,
+            "Contraseña": 100   
         }
+        
         for col in columns:
             self.tree_tutores.heading(col, text=col)
             self.tree_tutores.column(col, anchor="center", width=anchos.get(col, 100))
+        
+        scroll_y = ttk.Scrollbar(self.frame_tutores, orient="vertical", command=self.tree_tutores.yview)
+        scroll_y.pack(side="right", fill="y")
+        
+        scroll_x = ttk.Scrollbar(self.frame_tutores, orient="horizontal", command=self.tree_tutores.xview)
+        scroll_x.pack(side="bottom", fill="x")
+        
+        self.tree_tutores.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         self.tree_tutores.pack(fill="both", expand=True, padx=10, pady=5)
 
         frame_botones = tk.Frame(self.frame_tutores, bg="#f0f0f0")
@@ -250,41 +362,55 @@ class GestionUsuarios:
 
         self.cargar_tutores()
 
-
+    def obtener_areas(self):
+        try:
+            conexion = conectar()
+            cursor = conexion.cursor()
+            cursor.execute("SELECT id_area, nombre_area FROM areas_conocimiento ORDER BY nombre_area")
+            return cursor.fetchall()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar las áreas: {str(e)}")
+            return []
+        finally:
+            if 'conexion' in locals() and conexion.is_connected():
+                conexion.close()
 
     def cargar_tutores(self):
-        conexion = conectar()
-        cursor = conexion.cursor()
+        try:
+            conexion = conectar()
+            cursor = conexion.cursor(dictionary=True)
 
-        cursor.execute("""
-            SELECT a.id_tutor, a.nombre, a.correo, b.password, a.especialidad, c.nombre_area
-            FROM tutores_areas d
-            JOIN tutores a ON a.id_tutor = d.id_tutor
-            JOIN usuarios b ON a.correo = b.username
-            JOIN areas_conocimiento c ON c.id_area = d.id_area
-        """)
+            cursor.execute("""
+                SELECT t.id_tutor, t.nombres, t.apellido_paterno, t.apellido_materno, 
+                       t.correo, t.especialidad, a.nombre_area AS area, u.password
+                FROM tutores t
+                JOIN usuarios u ON t.correo = u.username
+                JOIN tutores_areas ta ON t.id_tutor = ta.id_tutor
+                JOIN areas_conocimiento a ON ta.id_area = a.id_area
+            """)
 
-        resultados = cursor.fetchall()
-        conexion.close()
+            # Limpia la tabla actual
+            for item in self.tree_tutores.get_children():
+                self.tree_tutores.delete(item)
 
-        for item in self.tree_tutores.get_children():
-            self.tree_tutores.delete(item)
-        for fila in resultados:
-            self.tree_tutores.insert("", "end", values=fila)
-
-
-    def obtener_areas(self):
-            conexion = mysql.connector.connect(
-                host='localhost',
-                user='root',
-                password='',
-                database='tutorias_db'
-            )
-            cursor = conexion.cursor()
-            cursor.execute("SELECT id_area, nombre_area FROM areas_conocimiento")
-            resultados = cursor.fetchall()
-            conexion.close()
-            return resultados
+            # Inserta los nuevos datos
+            for tutor in cursor.fetchall():
+                self.tree_tutores.insert("", "end", values=(
+                    tutor['id_tutor'],
+                    tutor['nombres'],
+                    tutor['apellido_paterno'],
+                    tutor['apellido_materno'],
+                    tutor['correo'],
+                    tutor['especialidad'],
+                    tutor['area'],
+                    tutor['password']
+                ))
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar los tutores: {str(e)}")
+        finally:
+            if 'conexion' in locals() and conexion.is_connected():
+                conexion.close()
 
     def agregar_tutor(self):
         areas = self.obtener_areas()
@@ -292,73 +418,87 @@ class GestionUsuarios:
             messagebox.showerror("Error", "No hay áreas registradas.")
             return
 
-        nombre = simpledialog.askstring("Nuevo Tutor", "Nombre completo:")
-        if not nombre:
-            return
+        ventana = tk.Toplevel()
+        ventana.title("Nuevo Tutor")
+        ventana.geometry("400x450")
+        ventana.configure(bg="#f0f0f0")
 
-        self.ventana = tk.Toplevel()
-        self.ventana.title("Agregar Tutor")
-        ancho_ventana = 350
-        alto_ventana = 250
+        tk.Label(ventana, text="Nombres:", bg="#f0f0f0").pack(pady=5)
+        entry_nombres = tk.Entry(ventana)
+        entry_nombres.pack()
 
-        # Obtener dimensiones de la pantalla
-        pantalla_ancho = self.ventana.winfo_screenwidth()
-        pantalla_alto = self.ventana.winfo_screenheight()
+        tk.Label(ventana, text="Apellido Paterno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_p = tk.Entry(ventana)
+        entry_apellido_p.pack()
 
-        # Calcular coordenadas para centrar la ventana
-        x = (pantalla_ancho // 2) - (ancho_ventana // 2)
-        y = (pantalla_alto // 2) - (alto_ventana // 2)
+        tk.Label(ventana, text="Apellido Materno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_m = tk.Entry(ventana)
+        entry_apellido_m.pack()
 
-        self.ventana.geometry(f"{ancho_ventana}x{alto_ventana}+{x}+{y}")
-
-        tk.Label(self.ventana, text="Selecciona un área de conocimiento:").pack(pady=5)
-        area_var = tk.StringVar()
-        combo_areas = ttk.Combobox(self.ventana, textvariable=area_var, values=[a[1] for a in areas], state="readonly")
-        combo_areas.pack()
-
-        tk.Label(self.ventana, text="Nombre de la especialidad:").pack(pady=5)
-        entry_especialidad = tk.Entry(self.ventana)
+        tk.Label(ventana, text="Especialidad:", bg="#f0f0f0").pack(pady=5)
+        entry_especialidad = tk.Entry(ventana)
         entry_especialidad.pack()
 
-        def confirmar():
-            indice = combo_areas.current()
-            if indice == -1:
-                messagebox.showwarning("Error", "Selecciona un área válida.")
+        tk.Label(ventana, text="Área de conocimiento:", bg="#f0f0f0").pack(pady=5)
+        area_var = tk.StringVar()
+        combo_area = ttk.Combobox(ventana, textvariable=area_var, 
+                                 values=[a[1] for a in areas], state="readonly")
+        combo_area.pack()
+
+        tk.Label(ventana, text="Contraseña:", bg="#f0f0f0").pack(pady=5)
+        entry_password = tk.Entry(ventana, show="*")
+        entry_password.pack()
+
+        def guardar():
+            nombres = entry_nombres.get().strip()
+            apellido_p = entry_apellido_p.get().strip()
+            apellido_m = entry_apellido_m.get().strip()
+            especialidad = entry_especialidad.get().strip()
+            area = combo_area.current()
+            password = entry_password.get().strip()
+
+            if not nombres or not apellido_p or not especialidad or area == -1 or not password:
+                messagebox.showwarning("Error", "Todos los campos son obligatorios (excepto apellido materno)")
                 return
 
-            especialidad = entry_especialidad.get()
-            if not especialidad:
-                messagebox.showwarning("Error", "Ingresa una especialidad.")
-                return
-
-            id_area = areas[indice][0]
-            correo = f"{nombre.lower().replace(' ', '.')}@tutor.edu"
+            id_area = areas[area][0]
+            correo = f"profesor.{apellido_p.lower()}@tutor.edu"
 
             conexion = conectar()
             cursor = conexion.cursor()
             try:
-                cursor.execute("INSERT INTO tutores (nombre, correo, especialidad) VALUES (%s, %s, %s)",
-                            (nombre, correo, especialidad))
+                # Insertar tutor
+                cursor.execute(
+                    "INSERT INTO tutores (nombres, apellido_paterno, apellido_materno, correo, especialidad) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (nombres, apellido_p, apellido_m, correo, especialidad)
+                )
                 id_tutor = cursor.lastrowid
 
-                cursor.execute("INSERT INTO usuarios (username, password, id_relacion) VALUES (%s, %s, %s)",
-                            (correo, "tutor123", id_tutor))
+                # Insertar usuario
+                cursor.execute(
+                    "INSERT INTO usuarios (username, password, tipo, id_relacion) "
+                    "VALUES (%s, %s, 'tutor', %s)",
+                    (correo, password, id_tutor)
+                )
 
-                cursor.execute("INSERT INTO tutores_areas (id_tutor, id_area) VALUES (%s, %s)", (id_tutor, id_area))
+                # Asignar área
+                cursor.execute(
+                    "INSERT INTO tutores_areas (id_tutor, id_area) VALUES (%s, %s)",
+                    (id_tutor, id_area)
+                )
+
                 conexion.commit()
-
-                messagebox.showinfo("Éxito", f"Tutor agregado.\nCorreo: {correo}\nContraseña temporal: tutor123")
-                self.ventana.destroy()
+                messagebox.showinfo("Éxito", f"Tutor agregado.\nCorreo: {correo}")
+                ventana.destroy()
                 self.cargar_tutores()
-
             except mysql.connector.Error as err:
                 messagebox.showerror("Error", f"No se pudo agregar: {err}")
+                conexion.rollback()
             finally:
                 conexion.close()
 
-        tk.Button(self.ventana, text="Guardar Tutor", command=confirmar).pack(pady=10)
-
-
+        tk.Button(ventana, text="Guardar", command=guardar, bg="#4caf50", fg="white").pack(pady=10)
 
     def modificar_tutor(self):
         seleccionado = self.tree_tutores.selection()
@@ -369,83 +509,99 @@ class GestionUsuarios:
         item = self.tree_tutores.item(seleccionado)
         datos = item["values"]
         id_tutor = datos[0]
-        nombre_actual = datos[1]
-        correo_actual = datos[2]
-        especialidad_actual = datos[4]
-        area_actual = datos[5]
+        correo_actual = datos[4]
+        area_actual = datos[6]
 
         areas = self.obtener_areas()
+        if not areas:
+            return
 
         ventana = tk.Toplevel()
         ventana.title("Modificar Tutor")
-        ancho, alto = 400, 300
-        x = (ventana.winfo_screenwidth() // 2) - (ancho // 2)
-        y = (ventana.winfo_screenheight() // 2) - (alto // 2)
-        ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
+        ventana.geometry("400x500")
+        ventana.configure(bg="#f0f0f0")
 
-        tk.Label(ventana, text="Nuevo nombre:").pack(pady=5)
-        entry_nombre = tk.Entry(ventana)
-        entry_nombre.insert(0, nombre_actual)
-        entry_nombre.pack()
+        tk.Label(ventana, text="Nombres:", bg="#f0f0f0").pack(pady=5)
+        entry_nombres = tk.Entry(ventana)
+        entry_nombres.insert(0, datos[1])
+        entry_nombres.pack()
 
-        tk.Label(ventana, text="Nueva especialidad:").pack(pady=5)
+        tk.Label(ventana, text="Apellido Paterno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_p = tk.Entry(ventana)
+        entry_apellido_p.insert(0, datos[2])
+        entry_apellido_p.pack()
+
+        tk.Label(ventana, text="Apellido Materno:", bg="#f0f0f0").pack(pady=5)
+        entry_apellido_m = tk.Entry(ventana)
+        entry_apellido_m.insert(0, datos[3])
+        entry_apellido_m.pack()
+
+        tk.Label(ventana, text="Especialidad:", bg="#f0f0f0").pack(pady=5)
         entry_especialidad = tk.Entry(ventana)
-        entry_especialidad.insert(0, especialidad_actual)
+        entry_especialidad.insert(0, datos[5])
         entry_especialidad.pack()
 
-        tk.Label(ventana, text="Nueva contraseña:").pack(pady=5)
-        entry_contrasena = tk.Entry(ventana, show="*")
-        entry_contrasena.pack()
-
-        tk.Label(ventana, text="Confirmar contraseña:").pack(pady=5)
-        entry_confirmar = tk.Entry(ventana, show="*")
-        entry_confirmar.pack()
-
-        tk.Label(ventana, text="Área de conocimiento:").pack(pady=5)
+        tk.Label(ventana, text="Área de conocimiento:", bg="#f0f0f0").pack(pady=5)
         area_var = tk.StringVar()
-        combo_area = ttk.Combobox(ventana, textvariable=area_var, values=[a[1] for a in areas], state="readonly")
+        combo_area = ttk.Combobox(ventana, textvariable=area_var, 
+                                 values=[a[1] for a in areas], state="readonly")
         combo_area.pack()
         combo_area.set(area_actual)
 
+        tk.Label(ventana, text="Nueva contraseña (dejar vacío para no cambiar):", bg="#f0f0f0").pack(pady=5)
+        entry_password = tk.Entry(ventana, show="*")
+        entry_password.pack()
+
         def guardar_cambios():
-            nuevo_nombre = entry_nombre.get().strip()
-            nueva_especialidad = entry_especialidad.get().strip()
-            contrasena = entry_contrasena.get().strip()
-            confirmar = entry_confirmar.get().strip()
-            indice_area = combo_area.current()
+            nombres = entry_nombres.get().strip()
+            apellido_p = entry_apellido_p.get().strip()
+            apellido_m = entry_apellido_m.get().strip()
+            especialidad = entry_especialidad.get().strip()
+            area_idx = combo_area.current()
+            password = entry_password.get().strip()
 
-            if not nuevo_nombre or not nueva_especialidad or indice_area == -1:
-                messagebox.showerror("Error", "Completa todos los campos obligatorios.")
+            if not nombres or not apellido_p or not especialidad or area_idx == -1:
+                messagebox.showwarning("Error", "Los campos obligatorios no pueden estar vacíos")
                 return
 
-            if contrasena and contrasena != confirmar:
-                messagebox.showerror("Error", "Las contraseñas no coinciden.")
-                return
-
-            nuevo_correo = f"{nuevo_nombre.lower().replace(' ', '.')}@tutor.edu"
-            id_area = areas[indice_area][0]
+            id_area = areas[area_idx][0]
+            nuevo_correo = f"profesor.{apellido_p.lower()}@tutor.edu"
 
             conexion = conectar()
             cursor = conexion.cursor()
             try:
-                cursor.execute("UPDATE tutores SET nombre = %s, correo = %s, especialidad = %s WHERE id_tutor = %s",
-                            (nuevo_nombre, nuevo_correo, nueva_especialidad, id_tutor))
-                
-                if contrasena:
-                    cursor.execute("UPDATE usuarios SET username = %s, password = %s WHERE username = %s",
-                                (nuevo_correo, contrasena, correo_actual))
-                else:
-                    cursor.execute("UPDATE usuarios SET username = %s WHERE username = %s",
-                                (nuevo_correo, correo_actual))
+                # Actualizar tutor
+                cursor.execute(
+                    "UPDATE tutores SET nombres=%s, apellido_paterno=%s, apellido_materno=%s, "
+                    "especialidad=%s, correo=%s WHERE id_tutor=%s",
+                    (nombres, apellido_p, apellido_m, especialidad, nuevo_correo, id_tutor)
+                )
 
-                cursor.execute("UPDATE tutores_areas SET id_area = %s WHERE id_tutor = %s", (id_area, id_tutor))
+                # Actualizar área
+                cursor.execute(
+                    "UPDATE tutores_areas SET id_area=%s WHERE id_tutor=%s",
+                    (id_area, id_tutor)
+                )
+
+                # Actualizar usuario
+                if password:
+                    cursor.execute(
+                        "UPDATE usuarios SET username=%s, password=%s WHERE username=%s",
+                        (nuevo_correo, password, correo_actual)
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE usuarios SET username=%s WHERE username=%s",
+                        (nuevo_correo, correo_actual)
+                    )
 
                 conexion.commit()
+                messagebox.showinfo("Éxito", "Tutor actualizado correctamente")
                 ventana.destroy()
                 self.cargar_tutores()
-                messagebox.showinfo("Éxito", "Tutor actualizado correctamente.")
             except mysql.connector.Error as err:
                 messagebox.showerror("Error", f"No se pudo actualizar: {err}")
+                conexion.rollback()
             finally:
                 conexion.close()
 
@@ -469,24 +625,27 @@ class GestionUsuarios:
             # Obtener el correo del tutor
             cursor.execute("SELECT correo FROM tutores WHERE id_tutor = %s", (id_tutor,))
             resultado = cursor.fetchone()
+            
             if not resultado:
-                messagebox.showerror("Error", "No se encontró el tutor.")
+                messagebox.showerror("Error", "No se encontró el tutor")
                 return
+                
             correo = resultado[0]
-
+            
             # Eliminar de tutores_areas
             cursor.execute("DELETE FROM tutores_areas WHERE id_tutor = %s", (id_tutor,))
-
+            
             # Eliminar de usuarios
             cursor.execute("DELETE FROM usuarios WHERE username = %s", (correo,))
-
+            
             # Eliminar de tutores
             cursor.execute("DELETE FROM tutores WHERE id_tutor = %s", (id_tutor,))
-
+            
             conexion.commit()
-            messagebox.showinfo("Éxito", "Tutor eliminado correctamente.")
+            messagebox.showinfo("Éxito", "Tutor eliminado correctamente")
             self.cargar_tutores()
         except mysql.connector.Error as err:
             messagebox.showerror("Error", f"No se pudo eliminar: {err}")
+            conexion.rollback()
         finally:
             conexion.close()
