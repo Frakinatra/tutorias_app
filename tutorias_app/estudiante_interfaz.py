@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, Toplevel
 from datetime import datetime
 from conexion import conectar
 
@@ -81,6 +81,8 @@ class InterfazEstudiante:
 
         columns_historial = ("ID", "Área", "Fecha", "Estado")
         self.tree_historial = ttk.Treeview(frame_historial, columns=columns_historial, show="headings")
+        ttk.Button(frame_botones, text="Ver Sesiones", command=self.mostrar_sesiones).pack(ipadx=10, ipady=5, pady=5)
+
         
         for col in columns_historial:
             self.tree_historial.heading(col, text=col)
@@ -126,12 +128,12 @@ class InterfazEstudiante:
             cursor = conexion.cursor(dictionary=True)
 
             query = """
-            SELECT t.id_tutor, t.nombre, t.correo, t.especialidad
+            SELECT t.id_tutor, t.nombres, t.correo, t.especialidad
             FROM tutores t
             JOIN tutores_areas ta ON t.id_tutor = ta.id_tutor
             JOIN areas_conocimiento a ON ta.id_area = a.id_area
             WHERE a.nombre_area = %s
-            ORDER BY t.nombre
+            ORDER BY t.nombres
             """
             cursor.execute(query, (area,))
             tutores = cursor.fetchall()
@@ -147,7 +149,7 @@ class InterfazEstudiante:
             for tutor in tutores:
                 self.tree.insert("", "end", values=(
                     tutor['id_tutor'],
-                    tutor['nombre'],
+                    tutor['nombres'],
                     tutor['correo'],
                     tutor['especialidad']
                 ))
@@ -247,5 +249,64 @@ class InterfazEstudiante:
                 conexion.rollback()
         finally:
             if 'conexion' in locals() and conexion.is_connected():
+                cursor.close()
+                conexion.close()
+                
+    def mostrar_sesiones(self):
+        ventana = Toplevel(self.root)
+        ventana.title("Mis Sesiones")
+        ventana.geometry("900x400")
+
+        columnas = ("ID", "Área", "Fecha y Hora", "Estado", "Duración", "Calificación", "Comentarios")
+        tree = ttk.Treeview(ventana, columns=columnas, show="headings")
+        for col in columnas:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center", width=120)
+
+        scroll_y = ttk.Scrollbar(ventana, orient="vertical", command=tree.yview)
+        tree.configure(yscroll=scroll_y.set)
+        scroll_y.pack(side="right", fill="y")
+        tree.pack(fill="both", expand=True)
+
+        try:
+            conexion = conectar()
+            cursor = conexion.cursor(dictionary=True)
+
+            if hasattr(self, 'id_estudiante'):  # desde interfaz de estudiante
+                cursor.execute("""
+                    SELECT s.id_sesion, a.nombre_area, s.fecha_hora, s.estado,
+                        s.duracion_minutos, s.calificacion, s.comentarios
+                    FROM sesiones s
+                    JOIN areas_conocimiento a ON s.id_area = a.id_area
+                    WHERE s.id_estudiante = %s
+                    ORDER BY s.fecha_hora DESC
+                """, (self.id_estudiante,))
+            elif hasattr(self, 'id_tutor'):  # desde interfaz de tutor
+                cursor.execute("""
+                    SELECT s.id_sesion, a.nombre_area, s.fecha_hora, s.estado,
+                        s.duracion_minutos, s.calificacion, s.comentarios
+                    FROM sesiones s
+                    JOIN areas_conocimiento a ON s.id_area = a.id_area
+                    WHERE s.id_tutor = %s
+                    ORDER BY s.fecha_hora DESC
+                """, (self.id_tutor,))
+            else:
+                return
+
+            for row in cursor.fetchall():
+                tree.insert("", "end", values=(
+                    row["id_sesion"],
+                    row["nombre_area"],
+                    row["fecha_hora"].strftime("%Y-%m-%d %H:%M"),
+                    row["estado"],
+                    row["duracion_minutos"],
+                    row["calificacion"] if row["calificacion"] else "-",
+                    row["comentarios"] if row["comentarios"] else "-"
+                ))
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+        finally:
+            if conexion.is_connected():
                 cursor.close()
                 conexion.close()
