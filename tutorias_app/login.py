@@ -101,7 +101,7 @@ class Login:
                     InterfazEstudiante(ventana, id_relacion)
                 elif tipo == "tutor":
                     ventana = tk.Toplevel()
-                    InterfazTutor(ventana, id_relacion)
+                    InterfazTutor(ventana, id_relacion,self.root)
             else:
                 messagebox.showerror("Error", "Credenciales incorrectas")
             

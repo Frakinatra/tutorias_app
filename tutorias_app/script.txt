@@ -60,6 +60,7 @@ CREATE TABLE tutores_areas (
     UNIQUE KEY (id_tutor, id_area)
 );
 
+
 -- Tabla de solicitudes de tutoría
 CREATE TABLE solicitudes (
     id_solicitud INT AUTO_INCREMENT PRIMARY KEY,
@@ -73,6 +74,7 @@ CREATE TABLE solicitudes (
     FOREIGN KEY (id_estudiante) REFERENCES estudiantes(id_estudiante) ON DELETE CASCADE,
     FOREIGN KEY (id_area) REFERENCES areas_conocimiento(id_area) ON DELETE CASCADE,
     FOREIGN KEY (id_tutor) REFERENCES tutores(id_tutor) ON DELETE SET NULL
+
 );
 
 -- Tabla de sesiones de tutoría
@@ -94,6 +96,7 @@ CREATE TABLE sesiones (
     FOREIGN KEY (id_area) REFERENCES areas_conocimiento(id_area) ON DELETE CASCADE
 );
 
+
 -- Tabla de disponibilidad de tutores
 CREATE TABLE disponibilidad_tutores (
     id_disponibilidad INT AUTO_INCREMENT PRIMARY KEY,
@@ -103,6 +106,7 @@ CREATE TABLE disponibilidad_tutores (
     hora_fin TIME NOT NULL,
     FOREIGN KEY (id_tutor) REFERENCES tutores(id_tutor) ON DELETE CASCADE
 );
+
 
 -- Tabla de historial de cambios
 CREATE TABLE historial_cambios (
