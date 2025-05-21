@@ -4,31 +4,59 @@ from conexion import conectar
 from datetime import datetime
 
 class InterfazEstudiante:
-    def __init__(self, root, id_estudiante):
+    def __init__(self, root, id_estudiante=None):
         self.root = root
-        self.id_estudiante = id_estudiante
-        self.root.title(f"📚 Gestión de Tutorías - Estudiante (ID: {id_estudiante})")
-        self.root.geometry("600x500")
-        self.root.configure(bg="#f0f0f0")
+        self.id_estudiante = id_estudiante if id_estudiante is not None else 1
+        self.root.title(f"Gestión de Tutorías | Estudiante (ID: {self.id_estudiante})")
+        self.root.geometry("650x520")
+        self.root.configure(bg="#e9ecef")
 
-        self.centrar_ventana(600, 500)
+        self.centrar_ventana(650, 520)
+
+        # Estilo empresarial
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("TButton",
+                        font=("Segoe UI", 10),
+                        padding=6,
+                        background="#2c3e50",
+                        foreground="white",
+                        relief="flat")
+        style.map("TButton",
+                background=[("active", "#34495e")])
+
+        style.configure("TLabel",
+                        font=("Segoe UI", 11),
+                        background="#ffffff",
+                        foreground="#2c3e50")
+
+        style.configure("Treeview.Heading", 
+                        font=("Segoe UI", 10, "bold"),
+                        background="#34495e",
+                        foreground="white")
+
+        style.configure("Treeview", 
+                        font=("Segoe UI", 10),
+                        rowheight=28,
+                        background="white",
+                        fieldbackground="white")
 
         # ===== Frame superior para búsqueda =====
-        frame_busqueda = tk.Frame(root, bg="#ffffff", bd=2, relief="groove")
-        frame_busqueda.pack(padx=10, pady=10, fill="x")
+        frame_busqueda = tk.Frame(root, bg="#ffffff", bd=1, relief="solid")
+        frame_busqueda.pack(padx=15, pady=15, fill="x")
 
-        tk.Label(frame_busqueda, text="Área de Conocimiento:", bg="#ffffff", font=("Arial", 11)).pack(side="left", padx=10, pady=10)
+        tk.Label(frame_busqueda, text="Área de Conocimiento:", bg="#ffffff", font=("Segoe UI", 11)).pack(side="left", padx=10, pady=10)
 
         self.area_var = tk.StringVar()
         self.combo_areas = ttk.Combobox(frame_busqueda, textvariable=self.area_var, state="readonly", width=30)
         self.combo_areas.pack(side="left", padx=5)
 
-        tk.Button(frame_busqueda, text="🔄 Cargar Áreas", command=self.cargar_areas, bg="#4caf50", fg="white").pack(side="left", padx=5)
-        tk.Button(frame_busqueda, text="🔍 Buscar Tutores", command=self.buscar_tutores, bg="#2196f3", fg="white").pack(side="left", padx=5)
+        ttk.Button(frame_busqueda, text="Cargar Áreas", command=self.cargar_areas).pack(side="left", padx=5)
+        ttk.Button(frame_busqueda, text="Buscar Tutores", command=self.buscar_tutores).pack(side="left", padx=5)
 
         # ===== Frame para TreeView =====
-        frame_lista = tk.Frame(root, bg="#f0f0f0")
-        frame_lista.pack(padx=10, pady=5, fill="both", expand=True)
+        frame_lista = tk.Frame(root, bg="#e9ecef")
+        frame_lista.pack(padx=15, pady=10, fill="both", expand=True)
 
         columns = ("ID", "Nombre", "Correo")
         self.tree = ttk.Treeview(frame_lista, columns=columns, show="headings")
@@ -42,11 +70,10 @@ class InterfazEstudiante:
         scrollbar.pack(side="right", fill="y")
 
         # ===== Botón de solicitud =====
-        frame_botones = tk.Frame(root, bg="#f0f0f0")
-        frame_botones.pack(padx=10, pady=10)
+        frame_botones = tk.Frame(root, bg="#e9ecef")
+        frame_botones.pack(padx=10, pady=15)
 
-        tk.Button(frame_botones, text="📅 Solicitar Tutoría", command=self.solicitar_tutoria,
-                bg="#ff9800", fg="white", font=("Arial", 12), width=20).pack()
+        ttk.Button(frame_botones, text="📅 Solicitar Tutoría", command=self.solicitar_tutoria).pack(ipadx=10, ipady=5)
 
     def centrar_ventana(self, ancho, alto):
         pantalla_ancho = self.root.winfo_screenwidth()
@@ -66,7 +93,7 @@ class InterfazEstudiante:
     def buscar_tutores(self):
         area = self.area_var.get()
         if not area:
-            messagebox.showwarning("⚠️ Atención", "Selecciona un área de conocimiento.")
+            messagebox.showwarning("Atención", "Selecciona un área de conocimiento.")
             return
 
         conexion = conectar()
@@ -92,10 +119,8 @@ class InterfazEstudiante:
     def solicitar_tutoria(self):
         area = self.area_var.get()
         if not area:
-            messagebox.showwarning("⚠️ Atención", "Selecciona un área de conocimiento.")
+            messagebox.showwarning("Atención", "Selecciona un área de conocimiento.")
             return
-
-        id_estudiante = 1  # 🔥 Cambiar por variable real cuando tengas login
 
         fecha_actual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -105,7 +130,7 @@ class InterfazEstudiante:
         cursor.execute("SELECT id_area FROM areas_conocimiento WHERE nombre_area = %s", (area,))
         resultado = cursor.fetchone()
         if not resultado:
-            messagebox.showerror("❌ Error", "Área no encontrada.")
+            messagebox.showerror("Error", "Área no encontrada.")
             conexion.close()
             return
 
@@ -115,8 +140,8 @@ class InterfazEstudiante:
         INSERT INTO solicitudes (id_estudiante, id_area, fecha, estado)
         VALUES (%s, %s, %s, 'Pendiente')
         """
-        cursor.execute(insert_query, (id_estudiante, id_area, fecha_actual))
+        cursor.execute(insert_query, (self.id_estudiante, id_area, fecha_actual))
         conexion.commit()
         conexion.close()
 
-        messagebox.showinfo("✅ Éxito", "Solicitud de tutoría creada correctamente.")
+        messagebox.showinfo("Éxito", "Solicitud de tutoría creada correctamente.")

@@ -42,15 +42,17 @@ CREATE TABLE tutores_areas (
     UNIQUE KEY (id_tutor, id_area)
 );
 
--- Tabla de solicitudes
+-- Tabla de solicitudes con id_tutor incluido
 CREATE TABLE solicitudes (
     id_solicitud INT AUTO_INCREMENT PRIMARY KEY,
     id_estudiante INT,
     id_area INT,
+    id_tutor INT NULL,
     fecha DATETIME,
     estado VARCHAR(50) DEFAULT 'Pendiente',
     FOREIGN KEY (id_estudiante) REFERENCES estudiantes(id_estudiante),
-    FOREIGN KEY (id_area) REFERENCES areas_conocimiento(id_area)
+    FOREIGN KEY (id_area) REFERENCES areas_conocimiento(id_area),
+    FOREIGN KEY (id_tutor) REFERENCES tutores(id_tutor)
 );
 
 -- Tabla de sesiones
@@ -69,7 +71,6 @@ CREATE TABLE sesiones (
     FOREIGN KEY (id_solicitud) REFERENCES solicitudes(id_solicitud)
 );
 
--- Insertar datos iniciales
 -- Admin
 INSERT INTO usuarios (username, password, id_relacion) VALUES 
 ('admin@admin.edu', 'admin123', NULL);
@@ -109,3 +110,9 @@ INSERT INTO tutores_areas (id_tutor, id_area) VALUES
 (2, 2), -- Martínez enseña Física
 (3, 3), -- Díaz enseña Programación
 (1, 3); -- López también enseña Programación
+
+-- Solicitudes
+INSERT INTO solicitudes (id_estudiante, id_area, id_tutor, fecha, estado) VALUES 
+(1, 1, 1, NOW(), 'Pendiente'),
+(2, 2, 2, NOW(), 'Pendiente'),
+(3, 3, 3, NOW(), 'Pendiente'),

@@ -3,11 +3,12 @@ from tkinter import ttk, messagebox
 from conexion import conectar
 
 class InterfazTutor:
-    def __init__(self, root, id_tutor):
+    def __init__(self, root, id_tutor,ventana_login):
         self.root = root
         self.id_tutor = id_tutor
-        self.root.title(f"📚 Tutor - Gestión de Solicitudes (ID: {id_tutor})")
-        self.root.geometry("1000x600")
+        self.ventana_login = ventana_login 
+        self.root.title(f"Tutor - Gestión de Solicitudes (ID: {id_tutor})")
+        self.root.geometry("1000x400")
         self.root.configure(bg="#f0f0f0")
 
         # ===== Frame superior para búsqueda =====
@@ -27,20 +28,36 @@ class InterfazTutor:
         self.combo_estados["values"] = ["Pendiente", "Aceptada", "Rechazada"]
         self.combo_estados.pack(side="left", padx=5)
 
-        tk.Button(frame_busqueda, text="🔄 Cargar Áreas", command=self.cargar_areas, bg="#4caf50", fg="white").pack(side="left", padx=5)
-        tk.Button(frame_busqueda, text="🔍 Filtrar", command=self.filtrar_solicitudes, bg="#2196f3", fg="white").pack(side="left", padx=5)
-        tk.Button(frame_busqueda, text="🧹 Limpiar Filtros", command=self.limpiar_filtros, bg="#9e9e9e", fg="white").pack(side="left", padx=5)
+        tk.Button(frame_busqueda, text=" Cargar Áreas", command=self.cargar_areas, bg="#4caf50", fg="white").pack(side="left", padx=5)
+        tk.Button(frame_busqueda, text=" Filtrar", command=self.filtrar_solicitudes, bg="#2196f3", fg="white").pack(side="left", padx=5)
+        tk.Button(frame_busqueda, text=" Limpiar Filtros", command=self.limpiar_filtros, bg="#9e9e9e", fg="white").pack(side="left", padx=5)
 
-        # ===== Treeview para mostrar solicitudes =====
-        self.tree = ttk.Treeview(root, columns=("ID", "Estudiante", "Área", "Fecha", "Estado"), show="headings")
-        self.tree.heading("ID", text="ID")
-        self.tree.heading("Estudiante", text="Estudiante")
-        self.tree.heading("Área", text="Área de Conocimiento")
-        self.tree.heading("Fecha", text="Fecha")
-        self.tree.heading("Estado", text="Estado")
+        # ===== Frame para Treeview con Scrollbars =====
+        frame_tree = tk.Frame(root)
+        frame_tree.pack(padx=10, pady=10, fill="both", expand=True)
 
-        self.tree.pack(padx=10, pady=10, fill="both", expand=True)
+        # Scrollbars
+        scrollbar_y = ttk.Scrollbar(frame_tree, orient="vertical")
+        scrollbar_y.pack(side="right", fill="y")
 
+        scrollbar_x = ttk.Scrollbar(frame_tree, orient="horizontal")
+        scrollbar_x.pack(side="bottom", fill="x")
+
+        # Treeview
+        self.tree = ttk.Treeview(frame_tree, columns=("ID", "Estudiante", "Área", "Fecha", "Estado"),
+                                show="headings", yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+
+        for col in ("ID", "Estudiante", "Área", "Fecha", "Estado"):
+            self.tree.heading(col, text=col, anchor="center")
+            self.tree.column(col, anchor="center", width=100)  # Ajusta el ancho si es necesario
+
+        self.tree.pack(fill="both", expand=True)
+
+        # Configuración del scrollbar
+        scrollbar_y.config(command=self.tree.yview)
+        scrollbar_x.config(command=self.tree.xview)
+
+        
         # ===== Botones para aceptar/rechazar =====
         btn_frame = tk.Frame(root, bg="#f0f0f0")
         btn_frame.pack(pady=10)
@@ -48,6 +65,7 @@ class InterfazTutor:
         tk.Button(btn_frame, text="Aceptar Solicitud", command=self.aceptar_solicitud, bg="#4caf50", fg="white").pack(side="left", padx=10)
         tk.Button(btn_frame, text="Rechazar Solicitud", command=self.rechazar_solicitud, bg="#f44336", fg="white").pack(side="left", padx=10)
         tk.Button(btn_frame, text="Marcar como Completada", command=self.completar_solicitud, bg="#ff9800", fg="white").pack(side="left", padx=10)
+        tk.Button(btn_frame, text="Cerrar Sesión", command=self.cerrar_sesion, bg="#607d8b", fg="white").pack(side="left", padx=10)
 
         # ===== Cargar datos iniciales =====
         self.cargar_areas()
@@ -75,8 +93,8 @@ class InterfazTutor:
             FROM solicitudes s
             JOIN estudiantes e ON s.id_estudiante = e.id_estudiante
             JOIN areas_conocimiento a ON s.id_area = a.id_area
-            JOIN tutores_areas ta ON s.id_area = ta.id_area
-            WHERE ta.id_tutor = %s
+            WHERE s.id_tutor = %s
+
         """
         cursor.execute(query, (self.id_tutor,))
         resultados = cursor.fetchall()
@@ -101,8 +119,7 @@ class InterfazTutor:
             FROM solicitudes s
             JOIN estudiantes e ON s.id_estudiante = e.id_estudiante
             JOIN areas_conocimiento a ON s.id_area = a.id_area
-            JOIN tutores_areas ta ON s.id_area = ta.id_area
-            WHERE ta.id_tutor = %s
+            WHERE s.id_tutor = %s
         """
         params = [self.id_tutor]
 
@@ -124,7 +141,6 @@ class InterfazTutor:
         for fila in resultados:
             self.tree.insert("", "end", values=fila)
 
-
     def limpiar_filtros(self):
         self.area_var.set("")  # Limpiar selección del combo
         self.estado_var.set("")  # Si tienes estado también
@@ -139,7 +155,19 @@ class InterfazTutor:
 
         item = self.tree.item(seleccionado)
         id_solicitud = item["values"][0]
+        estado_actual = item["values"][4]
 
+        if estado_actual == "Completada":
+            messagebox.showwarning("Advertencia", "No se puede aceptar una solicitud que ya fue completada.")
+            return
+        if estado_actual == "Rechazada":
+            messagebox.showwarning("Advertencia", "No se puede aceptar una solicitud que ya fue rechazada.")
+            return
+        if estado_actual == "Aceptada":
+            messagebox.showinfo("Información", "La solicitud ya fue aceptada.")
+            return
+        
+        
         conexion = conectar()
         cursor = conexion.cursor()
         cursor.execute("UPDATE solicitudes SET estado = 'Aceptada' WHERE id_solicitud = %s", (id_solicitud,))
@@ -147,6 +175,7 @@ class InterfazTutor:
         conexion.close()
         self.filtrar_solicitudes()
         messagebox.showinfo("Éxito", "Solicitud aceptada.")
+
 
     def rechazar_solicitud(self):
         seleccionado = self.tree.selection()
@@ -156,6 +185,16 @@ class InterfazTutor:
 
         item = self.tree.item(seleccionado)
         id_solicitud = item["values"][0]
+        estado_actual = item["values"][4]
+
+        if estado_actual == "Rechazada":
+            messagebox.showinfo("Información", "La solicitud ya fue rechazada.")
+            return
+    
+        elif estado_actual == "Completada":
+            messagebox.showwarning("Advertencia", "No se puede rechazar una solicitud que ya fue completada.")
+            return
+
 
         conexion = conectar()
         cursor = conexion.cursor()
@@ -164,6 +203,7 @@ class InterfazTutor:
         conexion.close()
         self.filtrar_solicitudes()
         messagebox.showinfo("Éxito", "Solicitud rechazada.")
+
 
     def completar_solicitud(self):
         seleccionado = self.tree.selection()
@@ -175,9 +215,15 @@ class InterfazTutor:
         id_solicitud = item["values"][0]
         estado_actual = item["values"][4]
 
-        if estado_actual != "Aceptada":
+
+        if estado_actual == "Completada":
+            messagebox.showinfo("Información", "La solicitud ya fue completada.")
+            return
+        elif estado_actual != "Aceptada":
             messagebox.showwarning("Advertencia", "Solo puede completar solicitudes que ya fueron aceptadas.")
             return
+        
+        
 
         conexion = conectar()
         cursor = conexion.cursor()
@@ -186,3 +232,8 @@ class InterfazTutor:
         conexion.close()
         self.filtrar_solicitudes()
         messagebox.showinfo("Éxito", "Solicitud marcada como completada.")
+
+
+    def cerrar_sesion(self):
+        self.root.destroy()  # cerrar ventana tutor
+        self.ventana_login.deiconify()  # mostrar ventana login
