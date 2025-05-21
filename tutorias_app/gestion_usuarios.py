@@ -33,11 +33,20 @@ class GestionUsuarios:
 
     # CRUD Estudiantes
     def estudiantes_ui(self):
-        columns = ("ID", "Nombre", "Correo")
+        columns = ("ID", "Nombre", "Correo", "Carrera", "Semestre", "Contraseña")
         self.tree_estudiantes = ttk.Treeview(self.frame_estudiantes, columns=columns, show="headings")
+        anchos = {
+            "ID": 50,
+            "Nombre": 130,
+            "Correo": 200,
+            "Carrera": 115,
+            "Semestre": 70,
+            "Contraseña": 110   
+        }
         for col in columns:
+
             self.tree_estudiantes.heading(col, text=col)
-            self.tree_estudiantes.column(col, anchor="center")
+            self.tree_estudiantes.column(col, anchor="center", width=anchos.get(col, 100))
         self.tree_estudiantes.pack(fill="both", expand=True, padx=10, pady=5)
 
         frame_botones = tk.Frame(self.frame_estudiantes, bg="#f0f0f0")
@@ -52,73 +61,133 @@ class GestionUsuarios:
     def cargar_estudiantes(self):
         conexion = conectar()
         cursor = conexion.cursor()
-        cursor.execute("SELECT id_estudiante, nombre, correo FROM estudiantes")
+
+        cursor.execute("""
+            SELECT e.id_estudiante, e.nombre, e.correo, e.carrera, e.semestre, u.password
+            FROM estudiantes e
+            JOIN usuarios u ON e.correo = u.username
+        """)
+
         resultados = cursor.fetchall()
         conexion.close()
 
+        # Limpia la tabla actual
         for item in self.tree_estudiantes.get_children():
             self.tree_estudiantes.delete(item)
+
+        # Inserta los nuevos datos
         for fila in resultados:
             self.tree_estudiantes.insert("", "end", values=fila)
+
 
     def agregar_estudiante(self):
         nombre = simpledialog.askstring("Nuevo Estudiante", "Nombre completo:")
         if not nombre:
             return
-            
+
+        carrera = simpledialog.askstring("Nuevo Estudiante", "Carrera:")
+        if not carrera:
+            return
+
+        try:
+            semestre = simpledialog.askinteger("Nuevo Estudiante", "Semestre:")
+            if semestre is None or semestre <= 0:
+                messagebox.showwarning("Datos inválidos", "El semestre debe ser un número positivo.")
+                return
+        except ValueError:
+            messagebox.showwarning("Datos inválidos", "El semestre debe ser un número.")
+            return
+
         # Generar correo automático
         correo = f"{nombre.lower().replace(' ', '.')}@alumno.edu"
-        
+
         conexion = conectar()
         cursor = conexion.cursor()
         try:
-            cursor.execute("INSERT INTO estudiantes (nombre, correo) VALUES (%s, %s)", (nombre, correo))
+            cursor.execute(
+                "INSERT INTO estudiantes (nombre, correo, carrera, semestre) VALUES (%s, %s, %s, %s)",
+                (nombre, correo, carrera, semestre)
+            )
             id_estudiante = cursor.lastrowid
-            cursor.execute("INSERT INTO usuarios (username, password, id_relacion) VALUES (%s, %s, %s)",
-                         (correo, "password123", id_estudiante))
+
+            # Insertar también en la tabla usuarios
+            cursor.execute(
+                "INSERT INTO usuarios (username, password, id_relacion) VALUES (%s, %s, %s)",
+                (correo, "alumno123", id_estudiante)
+            )
+
             conexion.commit()
-            messagebox.showinfo("Éxito", f"Estudiante agregado.\nCorreo: {correo}\nContraseña temporal: password123")
+            messagebox.showinfo("Éxito", f"Estudiante agregado.\nCorreo: {correo}\nContraseña temporal: alumno123")
             self.cargar_estudiantes()
         except mysql.connector.Error as err:
             messagebox.showerror("Error", f"No se pudo agregar: {err}")
         finally:
             conexion.close()
 
+
     def modificar_estudiante(self):
         seleccionado = self.tree_estudiantes.selection()
         if not seleccionado:
-            messagebox.showwarning("Atención", "Selecciona un estudiante.")
+            messagebox.showwarning("Advertencia", "Selecciona un estudiante para modificar.")
             return
-        id_estudiante = self.tree_estudiantes.item(seleccionado[0])['values'][0]
-        nuevo_nombre = simpledialog.askstring("Modificar", "Nuevo nombre:")
-        if not nuevo_nombre:
-            return
+
+        item = self.tree_estudiantes.item(seleccionado)
+        datos = item["values"]
+        id_estudiante = datos[0]
+        nombre_actual = datos[1]
+        correo = datos[2]
+
+        ventana = tk.Toplevel()
+        ventana.title("Modificar Estudiante")
+        ventana.geometry("350x250")
+
+        tk.Label(ventana, text="Nuevo nombre:").pack(pady=5)
+        entry_nombre = tk.Entry(ventana)
+        entry_nombre.insert(0, nombre_actual)
+        entry_nombre.pack()
+
+        tk.Label(ventana, text="Nueva contraseña:").pack(pady=5)
+        entry_contrasena = tk.Entry(ventana, show="*")
+        entry_contrasena.pack()
+
+        tk.Label(ventana, text="Repetir contraseña:").pack(pady=5)
+        entry_repetir = tk.Entry(ventana, show="*")
+        entry_repetir.pack()
+
+        def guardar_cambios():
+            nuevo_nombre = entry_nombre.get().strip()
+            nueva_contrasena = entry_contrasena.get().strip()
+            repetir_contrasena = entry_repetir.get().strip()
             
-        # Generar nuevo correo
-        nuevo_correo = f"{nuevo_nombre.lower().replace(' ', '.')}@alumno.edu"
-        
-        conexion = conectar()
-        cursor = conexion.cursor()
-        try:
-            # Obtener correo antiguo
-            cursor.execute("SELECT correo FROM estudiantes WHERE id_estudiante = %s", (id_estudiante,))
-            correo_antiguo = cursor.fetchone()[0]
-            
-            # Actualizar estudiante
-            cursor.execute("UPDATE estudiantes SET nombre = %s, correo = %s WHERE id_estudiante = %s",
-                         (nuevo_nombre, nuevo_correo, id_estudiante))
-            
-            # Actualizar usuario
-            cursor.execute("UPDATE usuarios SET username = %s WHERE username = %s",
-                         (nuevo_correo, correo_antiguo))
-            
+
+            if not nuevo_nombre:
+                messagebox.showerror("Error", "El nombre no puede estar vacío.")
+                return
+
+            conexion = conectar()
+            cursor = conexion.cursor()
+
+            nvo_correo = f"{nuevo_nombre.lower().replace(' ', '.')}@alumno.edu"
+            # Actualiza el nombre
+            cursor.execute("UPDATE estudiantes SET nombre = %s, correo = %s WHERE id_estudiante = %s", (nuevo_nombre, nvo_correo, id_estudiante))
+
+            # Si se ingresó nueva contraseña
+            if nueva_contrasena or repetir_contrasena:
+                if nueva_contrasena != repetir_contrasena:
+                    messagebox.showerror("Error", "Las contraseñas no coinciden.")
+                    conexion.close()
+                    return
+                
+                cursor.execute("UPDATE usuarios SET password = %s, username = %s WHERE username = %s", (nueva_contrasena, nvo_correo, correo))
+
             conexion.commit()
-            messagebox.showinfo("Éxito", "Estudiante actualizado")
-            self.cargar_estudiantes()
-        except mysql.connector.Error as err:
-            messagebox.showerror("Error", f"No se pudo actualizar: {err}")
-        finally:
             conexion.close()
+            self.cargar_estudiantes()
+            ventana.destroy()
+            messagebox.showinfo("Éxito", "Estudiante actualizado correctamente.")
+
+        tk.Button(ventana, text="Guardar cambios", command=guardar_cambios, bg="#2196f3", fg="white").pack(pady=10)
+
 
     def eliminar_estudiante(self):
         seleccionado = self.tree_estudiantes.selection()
@@ -198,9 +267,9 @@ class GestionUsuarios:
             cursor.execute("INSERT INTO tutores (nombre, correo) VALUES (%s, %s)", (nombre, correo))
             id_tutor = cursor.lastrowid
             cursor.execute("INSERT INTO usuarios (username, password, id_relacion) VALUES (%s, %s, %s)",
-                         (correo, "password123", id_tutor))
+                         (correo, "alumno123", id_tutor))
             conexion.commit()
-            messagebox.showinfo("Éxito", f"Tutor agregado.\nCorreo: {correo}\nContraseña temporal: password123")
+            messagebox.showinfo("Éxito", f"Tutor agregado.\nCorreo: {correo}\nContraseña temporal: alumno123")
             self.cargar_tutores()
         except mysql.connector.Error as err:
             messagebox.showerror("Error", f"No se pudo agregar: {err}")
