@@ -35,10 +35,7 @@ class Login:
         login_btn = tk.Button(frame, text="Iniciar Sesión", command=self.validar_login, bg="#4caf50", fg="white", width=15)
         login_btn.grid(row=3, columnspan=2, pady=15)
         
-        # Botón para cambiar contraseña
-        tk.Button(root, text="¿Olvidaste tu contraseña?", command=self.cambiar_contrasena, 
-                bg="#f0f0f0", fg="blue", borderwidth=0).pack(pady=5)
-        
+    
         # Versión
         tk.Label(root, text="Sistema de Tutorías v2.0", bg="#f0f0f0", fg="gray").pack(side="bottom", pady=10)
     
