@@ -63,7 +63,6 @@ class GestionUsuarios:
         frame_botones = tk.Frame(self.frame_estudiantes, bg="#f0f0f0")
         frame_botones.pack(pady=5)
 
-        tk.Button(frame_botones, text="➕ Añadir", command=self.agregar_estudiante, bg="#4caf50", fg="white").pack(side="left", padx=5)
         tk.Button(frame_botones, text="✏️ Modificar", command=self.modificar_estudiante, bg="#2196f3", fg="white").pack(side="left", padx=5)
         tk.Button(frame_botones, text="🗑️ Eliminar", command=self.eliminar_estudiante, bg="#f44336", fg="white").pack(side="left", padx=5)
 
@@ -103,85 +102,6 @@ class GestionUsuarios:
         finally:
             if 'conexion' in locals() and conexion.is_connected():
                 conexion.close()
-
-    def agregar_estudiante(self):
-        ventana = tk.Toplevel()
-        ventana.title("Nuevo Estudiante")
-        ventana.geometry("400x400")
-        ventana.configure(bg="#f0f0f0")
-
-        tk.Label(ventana, text="Nombres:", bg="#f0f0f0").pack(pady=5)
-        entry_nombres = tk.Entry(ventana)
-        entry_nombres.pack()
-
-        tk.Label(ventana, text="Apellido Paterno:", bg="#f0f0f0").pack(pady=5)
-        entry_apellido_p = tk.Entry(ventana)
-        entry_apellido_p.pack()
-
-        tk.Label(ventana, text="Apellido Materno:", bg="#f0f0f0").pack(pady=5)
-        entry_apellido_m = tk.Entry(ventana)
-        entry_apellido_m.pack()
-
-        tk.Label(ventana, text="Carrera:", bg="#f0f0f0").pack(pady=5)
-        entry_carrera = tk.Entry(ventana)
-        entry_carrera.pack()
-
-        tk.Label(ventana, text="Semestre:", bg="#f0f0f0").pack(pady=5)
-        entry_semestre = tk.Entry(ventana)
-        entry_semestre.pack()
-
-        tk.Label(ventana, text="Contraseña:", bg="#f0f0f0").pack(pady=5)
-        entry_password = tk.Entry(ventana, show="*")
-        entry_password.pack()
-
-        def guardar():
-            nombres = entry_nombres.get().strip()
-            apellido_p = entry_apellido_p.get().strip()
-            apellido_m = entry_apellido_m.get().strip()
-            carrera = entry_carrera.get().strip()
-            semestre = entry_semestre.get().strip()
-            password = entry_password.get().strip()
-
-            if not nombres or not apellido_p or not carrera or not semestre or not password:
-                messagebox.showwarning("Error", "Todos los campos son obligatorios (excepto apellido materno)")
-                return
-
-            try:
-                semestre = int(semestre)
-                if semestre <= 0:
-                    raise ValueError
-            except ValueError:
-                messagebox.showwarning("Error", "El semestre debe ser un número positivo")
-                return
-
-            correo = f"{nombres.lower().split()[0]}.{apellido_p.lower()}@alumno.edu"
-
-            conexion = conectar()
-            cursor = conexion.cursor()
-            try:
-                cursor.execute(
-                    "INSERT INTO estudiantes (nombres, apellido_paterno, apellido_materno, correo, carrera, semestre) "
-                    "VALUES (%s, %s, %s, %s, %s, %s)",
-                    (nombres, apellido_p, apellido_m, correo, carrera, semestre)
-                )
-                id_estudiante = cursor.lastrowid
-
-                cursor.execute(
-                    "INSERT INTO usuarios (username, password, tipo, id_relacion) "
-                    "VALUES (%s, %s, 'estudiante', %s)",
-                    (correo, password, id_estudiante)
-                )
-
-                conexion.commit()
-                messagebox.showinfo("Éxito", f"Estudiante agregado.\nCorreo: {correo}")
-                self.cargar_estudiantes()
-                ventana.destroy()
-            except mysql.connector.Error as err:
-                messagebox.showerror("Error", f"No se pudo agregar: {err}")
-            finally:
-                conexion.close()
-
-        tk.Button(ventana, text="Guardar", command=guardar, bg="#4caf50", fg="white").pack(pady=10)
 
     def modificar_estudiante(self):
         seleccionado = self.tree_estudiantes.selection()
@@ -356,7 +276,7 @@ class GestionUsuarios:
         frame_botones = tk.Frame(self.frame_tutores, bg="#f0f0f0")
         frame_botones.pack(pady=5)
 
-        tk.Button(frame_botones, text="➕ Añadir", command=self.agregar_tutor, bg="#4caf50", fg="white").pack(side="left", padx=5)
+        
         tk.Button(frame_botones, text="✏️ Modificar", command=self.modificar_tutor, bg="#2196f3", fg="white").pack(side="left", padx=5)
         tk.Button(frame_botones, text="🗑️ Eliminar", command=self.eliminar_tutor, bg="#f44336", fg="white").pack(side="left", padx=5)
 
@@ -412,93 +332,6 @@ class GestionUsuarios:
             if 'conexion' in locals() and conexion.is_connected():
                 conexion.close()
 
-    def agregar_tutor(self):
-        areas = self.obtener_areas()
-        if not areas:
-            messagebox.showerror("Error", "No hay áreas registradas.")
-            return
-
-        ventana = tk.Toplevel()
-        ventana.title("Nuevo Tutor")
-        ventana.geometry("400x450")
-        ventana.configure(bg="#f0f0f0")
-
-        tk.Label(ventana, text="Nombres:", bg="#f0f0f0").pack(pady=5)
-        entry_nombres = tk.Entry(ventana)
-        entry_nombres.pack()
-
-        tk.Label(ventana, text="Apellido Paterno:", bg="#f0f0f0").pack(pady=5)
-        entry_apellido_p = tk.Entry(ventana)
-        entry_apellido_p.pack()
-
-        tk.Label(ventana, text="Apellido Materno:", bg="#f0f0f0").pack(pady=5)
-        entry_apellido_m = tk.Entry(ventana)
-        entry_apellido_m.pack()
-
-        tk.Label(ventana, text="Especialidad:", bg="#f0f0f0").pack(pady=5)
-        entry_especialidad = tk.Entry(ventana)
-        entry_especialidad.pack()
-
-        tk.Label(ventana, text="Área de conocimiento:", bg="#f0f0f0").pack(pady=5)
-        area_var = tk.StringVar()
-        combo_area = ttk.Combobox(ventana, textvariable=area_var, 
-                                 values=[a[1] for a in areas], state="readonly")
-        combo_area.pack()
-
-        tk.Label(ventana, text="Contraseña:", bg="#f0f0f0").pack(pady=5)
-        entry_password = tk.Entry(ventana, show="*")
-        entry_password.pack()
-
-        def guardar():
-            nombres = entry_nombres.get().strip()
-            apellido_p = entry_apellido_p.get().strip()
-            apellido_m = entry_apellido_m.get().strip()
-            especialidad = entry_especialidad.get().strip()
-            area = combo_area.current()
-            password = entry_password.get().strip()
-
-            if not nombres or not apellido_p or not especialidad or area == -1 or not password:
-                messagebox.showwarning("Error", "Todos los campos son obligatorios (excepto apellido materno)")
-                return
-
-            id_area = areas[area][0]
-            correo = f"profesor.{apellido_p.lower()}@tutor.edu"
-
-            conexion = conectar()
-            cursor = conexion.cursor()
-            try:
-                # Insertar tutor
-                cursor.execute(
-                    "INSERT INTO tutores (nombres, apellido_paterno, apellido_materno, correo, especialidad) "
-                    "VALUES (%s, %s, %s, %s, %s)",
-                    (nombres, apellido_p, apellido_m, correo, especialidad)
-                )
-                id_tutor = cursor.lastrowid
-
-                # Insertar usuario
-                cursor.execute(
-                    "INSERT INTO usuarios (username, password, tipo, id_relacion) "
-                    "VALUES (%s, %s, 'tutor', %s)",
-                    (correo, password, id_tutor)
-                )
-
-                # Asignar área
-                cursor.execute(
-                    "INSERT INTO tutores_areas (id_tutor, id_area) VALUES (%s, %s)",
-                    (id_tutor, id_area)
-                )
-
-                conexion.commit()
-                messagebox.showinfo("Éxito", f"Tutor agregado.\nCorreo: {correo}")
-                ventana.destroy()
-                self.cargar_tutores()
-            except mysql.connector.Error as err:
-                messagebox.showerror("Error", f"No se pudo agregar: {err}")
-                conexion.rollback()
-            finally:
-                conexion.close()
-
-        tk.Button(ventana, text="Guardar", command=guardar, bg="#4caf50", fg="white").pack(pady=10)
 
     def modificar_tutor(self):
         seleccionado = self.tree_tutores.selection()

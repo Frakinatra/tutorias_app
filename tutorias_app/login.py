@@ -6,6 +6,7 @@ from menu_principal import MenuPrincipal
 from estudiante_interfaz import InterfazEstudiante
 from tutor_interfaz import InterfazTutor
 
+
 class Login:
     def __init__(self, root):
         self.root = root
@@ -20,7 +21,7 @@ class Login:
         frame.pack(pady=30)
         
         # Logo o título
-        tk.Label(frame, text="🔐 Inicio de Sesión", font=("Helvetica", 16, "bold"), bg="#f0f0f0").grid(row=0, column=0, columnspan=2, pady=10)
+        tk.Label(frame, text="Inicio de Sesión", font=("Helvetica", 16, "bold"), bg="#f0f0f0").grid(row=0, column=0, columnspan=2, pady=10)
         
         # Campos de usuario y contraseña
         tk.Label(frame, text="Correo electrónico:", bg="#f0f0f0").grid(row=1, column=0, padx=5, pady=5, sticky="e")
@@ -36,8 +37,6 @@ class Login:
         login_btn.grid(row=3, columnspan=2, pady=15)
         
         
-        # Versión
-        tk.Label(root, text="Sistema de Tutorías v2.0", bg="#f0f0f0", fg="gray").pack(side="bottom", pady=10)
     
     def centrar_ventana(self, ancho, alto):
         pantalla_ancho = self.root.winfo_screenwidth()

@@ -308,4 +308,3 @@ class InterfazTutor:
             if conexion.is_connected():
                 cursor.close()
                 conexion.close()
-

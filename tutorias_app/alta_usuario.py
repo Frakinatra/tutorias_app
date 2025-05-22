@@ -7,7 +7,7 @@ from conexion import conectar
 class AltaUsuario:
     def __init__(self, root):
         self.root = root
-        self.root.title("📝 Alta de Usuario")
+        self.root.title("Alta de Usuario")
         self.root.geometry("450x550")  # Aumentamos el tamaño para los nuevos campos
         self.root.configure(bg="#f0f0f0")
         self.centrar_ventana(450, 550)
@@ -46,7 +46,7 @@ class AltaUsuario:
         self.frame_comun.pack(pady=10)
 
         # Campos comunes para todos los usuarios
-        tk.Label(self.frame_comun, text="Nombre(s):", bg="#f0f0f0").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        tk.Label(self.frame_comun, text="Nombres:", bg="#f0f0f0").grid(row=0, column=0, padx=5, pady=5, sticky="e")
         self.nombre_entry = tk.Entry(self.frame_comun, width=25)
         self.nombre_entry.grid(row=0, column=1, padx=5, pady=5)
 

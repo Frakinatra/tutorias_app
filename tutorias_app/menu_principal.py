@@ -4,17 +4,18 @@ from alta_usuario import AltaUsuario
 from estudiante_interfaz import InterfazEstudiante
 from tutor_interfaz import InterfazTutor
 from gestion_areas import GestionAreas
+from gestion_sesiones import GestionSesiones
 from gestion_usuarios import GestionUsuarios
 
 class MenuPrincipal:
     def __init__(self, root):
         self.root = root
-        self.root.title("📚 Gestión de Tutorías Académicas - Administrador")
+        self.root.title("Gestión de Tutorías Académicas - Administrador")
         self.root.configure(bg="#e3f2fd")
         self.centrar_ventana(450, 600)
 
         # Título
-        titulo = tk.Label(self.root, text="📚 Tutorías Académicas", font=("Helvetica", 22, "bold"),
+        titulo = tk.Label(self.root, text="Tutorías Académicas", font=("Helvetica", 22, "bold"),
                           bg="#e3f2fd", fg="#0d47a1")
         titulo.pack(pady=30)
 
@@ -25,6 +26,7 @@ class MenuPrincipal:
             ("👨‍🏫 Interfaz de Tutores", self.abrir_tutor_interfaz, "#ff9800"),
             ("📖 Gestión de Áreas", self.abrir_gestion_areas, "#8bc34a"),
             ("👥 Gestión de Usuarios", self.abrir_gestion_usuarios, "#e91e63"),
+            ("📖 Gestión de sesiones", self.abrir_gestion_sesiones, "#33ffca"),
             ("❌ Salir", self.root.quit, "#f44336"),
         ]
 
@@ -40,6 +42,10 @@ class MenuPrincipal:
     def abrir_estudiante_interfaz(self):
         ventana = tk.Toplevel(self.root)
         InterfazEstudiante(ventana)
+    
+    def abrir_gestion_sesiones(self):
+        ventana = tk.Toplevel(self.root)
+        GestionSesiones(ventana)
 
     def abrir_tutor_interfaz(self):
         ventana = tk.Toplevel(self.root)
