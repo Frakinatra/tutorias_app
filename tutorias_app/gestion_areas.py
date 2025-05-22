@@ -26,11 +26,14 @@ class GestionAreas:
         tk.Button(frame, text="Agregar", command=self.agregar_area, bg="#4caf50", fg="white").grid(row=1, column=1, pady=5)
 
         # Tabla de áreas
-        self.tree = ttk.Treeview(root, columns=("ID", "Área"), show="headings")
+        self.tree = ttk.Treeview(root, columns=("ID", "Área", "Desc"), show="headings")
         self.tree.heading("ID", text="ID")
         self.tree.heading("Área", text="Área de Conocimiento")
+        self.tree.heading("Desc", text="Descripción")
         self.tree.column("ID", anchor="center")
         self.tree.column("Área", anchor="center")
+        self.tree.column("Desc", anchor="center")
+        
         self.tree.pack(pady=10, fill="both", expand=True)
 
         # Botones inferiores centrados
@@ -53,7 +56,7 @@ class GestionAreas:
     def cargar_areas(self):
         conexion = conectar()
         cursor = conexion.cursor()
-        cursor.execute("SELECT id_area, nombre_area FROM areas_conocimiento")
+        cursor.execute("SELECT id_area, nombre_area, descripcion FROM areas_conocimiento")
         rows = cursor.fetchall()
         conexion.close()
 
@@ -76,6 +79,47 @@ class GestionAreas:
         conexion.close()
         self.area_entry.delete(0, tk.END)
         self.cargar_areas()
+        
+    def dialogo_modificar_area(self, nombre_actual, descripcion_actual):
+        dialogo = tk.Toplevel(self.root)
+        dialogo.title("Modificar Área")
+        dialogo.grab_set()
+        dialogo.configure(bg="#f0f0f0")
+
+        # Ajuste automático según contenido
+        dialogo.geometry("400x300")
+
+        tk.Label(dialogo, text="Nuevo nombre:", bg="#f0f0f0").pack(pady=(10, 0))
+        entrada_nombre = tk.Entry(dialogo, width=40)
+        entrada_nombre.insert(0, nombre_actual)
+        entrada_nombre.pack(padx=20)
+
+        tk.Label(dialogo, text="Nueva descripción:", bg="#f0f0f0").pack(pady=(10, 0))
+
+        # Frame para contener el Text y su Scrollbar
+        frame_desc = tk.Frame(dialogo, bg="#f0f0f0")
+        frame_desc.pack(padx=20, pady=(0, 10), fill="both", expand=True)
+
+        entrada_descripcion = tk.Text(frame_desc, height=5, wrap="word")
+        entrada_descripcion.insert("1.0", descripcion_actual)
+        entrada_descripcion.pack(side="left", fill="both", expand=True)
+
+        scrollbar = tk.Scrollbar(frame_desc, command=entrada_descripcion.yview)
+        scrollbar.pack(side="right", fill="y")
+        entrada_descripcion.config(yscrollcommand=scrollbar.set)
+
+        resultado = {}
+
+        def aceptar():
+            resultado['nombre'] = entrada_nombre.get()
+            resultado['descripcion'] = entrada_descripcion.get("1.0", "end-1c")
+            dialogo.destroy()
+
+        tk.Button(dialogo, text="Actualizar", command=aceptar, bg="#4caf50", fg="white").pack(pady=10)
+
+        dialogo.wait_window()
+        return resultado.get('nombre'), resultado.get('descripcion')
+
 
     def modificar_area(self):
         seleccionado = self.tree.selection()
@@ -83,18 +127,23 @@ class GestionAreas:
             messagebox.showwarning("Atención", "Selecciona un área para modificar.")
             return
 
-        id_area, nombre_actual = self.tree.item(seleccionado[0])['values']
+        id_area, nombre_actual, descripcion_actual = self.tree.item(seleccionado[0])['values']
 
-        nuevo_nombre = simpledialog.askstring("Modificar Área", "Nuevo nombre:", initialvalue=nombre_actual)
-        if not nuevo_nombre:
-            return
+        nuevo_nombre, nueva_descripcion = self.dialogo_modificar_area(nombre_actual, descripcion_actual)
+        if not nuevo_nombre or nueva_descripcion is None:
+            return  # El usuario canceló
 
         conexion = conectar()
         cursor = conexion.cursor()
-        cursor.execute("UPDATE areas_conocimiento SET nombre_area = %s WHERE id_area = %s", (nuevo_nombre, id_area))
+        cursor.execute(
+            "UPDATE areas_conocimiento SET nombre_area = %s, descripcion = %s WHERE id_area = %s",
+            (nuevo_nombre, nueva_descripcion, id_area)
+        )
         conexion.commit()
         conexion.close()
         self.cargar_areas()
+        
+
     
     def eliminar_area(self):
         seleccionado = self.tree.selection()
