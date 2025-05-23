@@ -92,7 +92,6 @@ class InterfazTutor:
 
             query = """
                 SELECT s.id_solicitud, CONCAT(e.nombres, ' ', e.apellido_paterno) AS estudiante,
-                   
                     a.nombre_area AS area, DATE_FORMAT(s.fecha, '%Y-%m-%d %H:%i') AS fecha, s.estado
                 FROM solicitudes s
                 JOIN estudiantes e ON s.id_estudiante = e.id_estudiante
