@@ -6,7 +6,6 @@ from menu_principal import MenuPrincipal
 from estudiante_interfaz import InterfazEstudiante
 from tutor_interfaz import InterfazTutor
 
-
 class Login:
     def __init__(self, root):
         self.root = root
@@ -21,7 +20,7 @@ class Login:
         frame.pack(pady=30)
         
         # Logo o título
-        tk.Label(frame, text="Inicio de Sesión", font=("Helvetica", 16, "bold"), bg="#f0f0f0").grid(row=0, column=0, columnspan=2, pady=10)
+        tk.Label(frame, text="🔐 Inicio de Sesión", font=("Helvetica", 16, "bold"), bg="#f0f0f0").grid(row=0, column=0, columnspan=2, pady=10)
         
         # Campos de usuario y contraseña
         tk.Label(frame, text="Correo electrónico:", bg="#f0f0f0").grid(row=1, column=0, padx=5, pady=5, sticky="e")
@@ -36,7 +35,12 @@ class Login:
         login_btn = tk.Button(frame, text="Iniciar Sesión", command=self.validar_login, bg="#4caf50", fg="white", width=15)
         login_btn.grid(row=3, columnspan=2, pady=15)
         
+        # Botón para cambiar contraseña
+        tk.Button(root, text="¿Olvidaste tu contraseña?", command=self.cambiar_contrasena, 
+                bg="#f0f0f0", fg="blue", borderwidth=0).pack(pady=5)
         
+        # Versión
+        tk.Label(root, text="Sistema de Tutorías v2.0", bg="#f0f0f0", fg="gray").pack(side="bottom", pady=10)
     
     def centrar_ventana(self, ancho, alto):
         pantalla_ancho = self.root.winfo_screenwidth()
@@ -97,7 +101,7 @@ class Login:
                     InterfazEstudiante(ventana, id_relacion)
                 elif tipo == "tutor":
                     ventana = tk.Toplevel()
-                    InterfazTutor(ventana, id_relacion)
+                    InterfazTutor(ventana, id_relacion,self.root)
             else:
                 messagebox.showerror("Error", "Credenciales incorrectas")
             
@@ -106,6 +110,52 @@ class Login:
         except mysql.connector.Error as err:
             messagebox.showerror("Error", f"No se pudo conectar a la base de datos: {err}")
     
+    def cambiar_contrasena(self):
+        ventana = tk.Toplevel(self.root)
+        ventana.title("Cambiar Contraseña")
+        ventana.geometry("300x200")
+        ventana.configure(bg="#f0f0f0")
+        
+        tk.Label(ventana, text="Correo electrónico:", bg="#f0f0f0").pack(pady=5)
+        correo_entry = tk.Entry(ventana, width=25)
+        correo_entry.pack(pady=5)
+        
+        tk.Label(ventana, text="Nueva contraseña:", bg="#f0f0f0").pack(pady=5)
+        nueva_pass_entry = tk.Entry(ventana, show="*", width=25)
+        nueva_pass_entry.pack(pady=5)
+        
+        def guardar_nueva_pass():
+            correo = correo_entry.get()
+            nueva_pass = nueva_pass_entry.get()
+            
+            if not correo or not nueva_pass:
+                messagebox.showwarning("Error", "Todos los campos son obligatorios")
+                return
+                
+            try:
+                conexion = mysql.connector.connect(
+                    host="localhost",
+                    user="root",
+                    password="",
+                    database="tutorias_db"
+                )
+                cursor = conexion.cursor()
+                
+                cursor.execute("UPDATE usuarios SET password = %s WHERE username = %s", (nueva_pass, correo))
+                
+                if cursor.rowcount > 0:
+                    conexion.commit()
+                    messagebox.showinfo("Éxito", "Contraseña actualizada correctamente")
+                    ventana.destroy()
+                else:
+                    messagebox.showerror("Error", "Correo no encontrado")
+                
+                conexion.close()
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error", f"No se pudo actualizar: {err}")
+        
+        tk.Button(ventana, text="Guardar", command=guardar_nueva_pass, bg="#4caf50", fg="white").pack(pady=10)
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = Login(root)

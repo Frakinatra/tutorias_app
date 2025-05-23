@@ -29,10 +29,13 @@ class InterfazTutor:
         self.combo_estados["values"] = ["Todos", "Pendiente", "Aceptada", "Rechazada", "Completada", "Cancelada"]
         self.combo_estados.current(0)
         self.combo_estados.pack(side="left", padx=5)
+        # Ejecutar automáticamente cuando se seleccione un estado
+        self.combo_estados.bind("<<ComboboxSelected>>", self.filtrar_por_estado)
 
-        tk.Button(frame_busqueda, text="Cargar Áreas", command=self.cargar_areas, bg="#4caf50", fg="white").pack(side="left", padx=5)
-        tk.Button(frame_busqueda, text="Filtrar", command=self.filtrar_solicitudes, bg="#2196f3", fg="white").pack(side="left", padx=5)
-        tk.Button(frame_busqueda, text="Limpiar Filtros", command=self.limpiar_filtros, bg="#9e9e9e", fg="white").pack(side="left", padx=5)
+
+        #tk.Button(frame_busqueda, text="Cargar Áreas", command=self.cargar_areas, bg="#4caf50", fg="white").pack(side="left", padx=5)
+        #tk.Button(frame_busqueda, text="Filtrar", command=self.filtrar_solicitudes, bg="#2196f3", fg="white").pack(side="left", padx=5)
+        #tk.Button(frame_busqueda, text="Limpiar Filtros", command=self.limpiar_filtros, bg="#9e9e9e", fg="white").pack(side="left", padx=5)
 
         frame_tree = tk.Frame(root)
         frame_tree.pack(padx=10, pady=10, fill="both", expand=True)
@@ -76,6 +79,41 @@ class InterfazTutor:
             self.combo_areas['values'] = [row[0] for row in cursor.fetchall()]
         except Exception as e:
             messagebox.showerror("Error", f"No se pudieron cargar las áreas: {str(e)}")
+        finally:
+            if conexion.is_connected():
+                conexion.close()
+
+
+    def filtrar_por_estado(self, event=None):
+        estado_seleccionado = self.estado_var.get()
+        try:
+            conexion = conectar()
+            cursor = conexion.cursor(dictionary=True)
+
+            query = """
+                SELECT s.id_solicitud, CONCAT(e.nombres, ' ', e.apellido_paterno) AS estudiante,
+                    a.nombre_area AS area, DATE_FORMAT(s.fecha, '%Y-%m-%d %H:%i') AS fecha, s.estado
+                FROM solicitudes s
+                JOIN estudiantes e ON s.id_estudiante = e.id_estudiante
+                JOIN areas_conocimiento a ON s.id_area = a.id_area
+                JOIN tutores_areas ta ON ta.id_area = a.id_area
+                WHERE ta.id_tutor = %s AND (s.id_tutor IS NULL OR s.id_tutor = %s)
+            """
+            valores = [self.id_tutor, self.id_tutor]
+
+            if estado_seleccionado != "Todos":
+                query += " AND s.estado = %s"
+                valores.append(estado_seleccionado)
+
+            query += " ORDER BY s.fecha DESC"
+            cursor.execute(query, valores)
+
+            self.tree.delete(*self.tree.get_children())
+            for row in cursor.fetchall():
+                self.tree.insert("", "end", values=(row['id_solicitud'], row['estudiante'], row['area'], row['fecha'], row['estado']))
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar las solicitudes: {str(e)}")
         finally:
             if conexion.is_connected():
                 conexion.close()
@@ -239,6 +277,8 @@ class InterfazTutor:
 
     def filtrar_solicitudes(self):
         self.cargar_solicitudes()
+       
+       
 
     def limpiar_filtros(self):
         self.area_var.set("")
