@@ -32,7 +32,7 @@ class InterfazTutor:
 
         tk.Button(frame_busqueda, text="Cargar Áreas", command=self.cargar_areas, bg="#4caf50", fg="white").pack(side="left", padx=5)
         tk.Button(frame_busqueda, text="Filtrar", command=self.filtrar_solicitudes, bg="#2196f3", fg="white").pack(side="left", padx=5)
-        tk.Button(frame_busqueda, text="Limpiar Filtros", command=self.limpiar_filtros, bg="#9e9e9e", fg="white").pack(side="left", padx=5)
+        #tk.Button(frame_busqueda, text="Limpiar Filtros", command=self.limpiar_filtros, bg="#9e9e9e", fg="white").pack(side="left", padx=5)
 
         frame_tree = tk.Frame(root)
         frame_tree.pack(padx=10, pady=10, fill="both", expand=True)
@@ -239,6 +239,7 @@ class InterfazTutor:
 
     def filtrar_solicitudes(self):
         self.cargar_solicitudes()
+       
 
     def limpiar_filtros(self):
         self.area_var.set("")
